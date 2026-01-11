@@ -1,25 +1,23 @@
 import './App.css'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useState } from 'react'
-import LoginPage from './features/auth/pages/LoginPage';
-import RegisterPage from './features/auth/pages/RegisterPage';
-import ChatPage from './features/chat/pages/ChatPage';
+import { ThemeProvider } from './providers/theme-provider'
+import LoginPage from './features/auth/pages/login-page'
+import RegisterPage from './features/auth/pages/register-page'
+import ChatPage from './features/chat/pages/chat-page'
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   return (
-    <Router>
-      <Routes>
-        <Route path ="/" element = {<LoginPage onLogin={() =>setIsAuthenticated(true)}/>}/>
-        <Route path ="/register" element = {<RegisterPage/>}/>
-        <Route 
-          path ="/chat" 
-          element={
-            isAuthenticated ? <ChatPage /> : <Navigate to="/" replace />
-          }
-        />
-        
-      </Routes>
-    </Router>
+    <ThemeProvider defaultTheme='dark' storageKey='vite-ui-theme'>
+      <Router>
+        <Routes>
+          <Route path='/' element={<Navigate to="/login"/>}/>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path='/chat' element={<ChatPage/>}></Route>
+
+        </Routes>
+      </Router>
+    </ThemeProvider>
+    
   )
 }
 
