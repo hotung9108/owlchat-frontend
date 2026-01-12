@@ -77,10 +77,10 @@ export function RegisterForm({
               <Field>
                 <Button type="submit">Create Account</Button>
               </Field>
-              <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
+              {/* <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                 Or continue with
-              </FieldSeparator>
-              <Field className="grid grid-cols-3 gap-4">
+              </FieldSeparator> */}
+              {/* <Field className="grid grid-cols-3 gap-4">
                 <Button variant="outline" type="button">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path
@@ -108,7 +108,7 @@ export function RegisterForm({
                   </svg>
                   <span className="sr-only">Sign up with Meta</span>
                 </Button>
-              </Field>
+              </Field> */}
 
               <FieldDescription className="text-center">
                 Already have an account? <Link to="/login" className="text-blue-500 hover:underline">Sign in</Link>

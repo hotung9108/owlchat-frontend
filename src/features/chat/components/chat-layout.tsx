@@ -15,15 +15,20 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { Bell } from "lucide-react";
 export default function Layout({ children }: { children: React.ReactNode }) {
     return (
-        <SidebarProvider>
+        <SidebarProvider
+            style={
+                {
+                    "--sidebar-width": "400px",
+                } as React.CSSProperties
+            }>
             <AppSidebar />
             <SidebarInset>
                 <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
                     <SidebarTrigger className="-ml-1" />
 
-                    <h1 className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                    {/* <h1 className="text-xl font-bold text-gray-800 dark:text-gray-200">
                         OwlChat
-                    </h1>
+                    </h1> */}
                     <div className="flex items-center gap-4 ml-auto">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
