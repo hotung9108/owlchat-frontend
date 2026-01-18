@@ -4,7 +4,8 @@ import { ThemeProvider } from './providers/theme-provider'
 import LoginPage from './features/auth/pages/login-page'
 import RegisterPage from './features/auth/pages/register-page'
 import ChatPage from './features/chat/pages/chat-page'
-// import UserProfilePage from './features/user-profile/pages/user-profile-page'
+import UserProfilePage from './features/user-profile/pages/user-profile-page'
+
 function App() {
   return (
     <ThemeProvider defaultTheme='dark' storageKey='vite-ui-theme'>
@@ -14,11 +15,10 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path='/chat' element={<ChatPage/>}></Route>
-          {/* <Route path='/user-profile' element={<UserProfilePage/>}></Route> */}
+          <Route path='/profile' element={<UserProfilePage/>}></Route> 
         </Routes>
       </Router>
     </ThemeProvider>
-    
   )
 }
 
