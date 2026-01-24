@@ -4,6 +4,7 @@ import * as React from "react"
 import { ArchiveX, Command, File, Inbox, Send, Trash2 } from "lucide-react"
 
 import { Label } from "@/components/ui/label"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar" // 1. Added Avatar Import
 import {
   Sidebar,
   SidebarContent,
@@ -64,80 +65,48 @@ const data = {
       email: "williamsmith@example.com",
       subject: "Meeting Tomorrow",
       date: "09:34 AM",
-      teaser:
-        "Hi team, just a reminder about our meeting tomorrow at 10 AM.\nPlease come prepared with your project updates.",
+      teaser: "Hi team, just a reminder about our meeting tomorrow at 10 AM.",
+      avatar: "https://i.pravatar.cc/150?u=william",
     },
     {
       name: "Alice Smith",
       email: "alicesmith@example.com",
       subject: "Re: Project Update",
       date: "Yesterday",
-      teaser:
-        "Thanks for the update. The progress looks great so far.\nLet's schedule a call to discuss the next steps.",
+      teaser: "Thanks for the update. The progress looks great so far.",
+      avatar: "https://i.pravatar.cc/150?u=alice",
     },
     {
       name: "Bob Johnson",
       email: "bobjohnson@example.com",
       subject: "Weekend Plans",
       date: "2 days ago",
-      teaser:
-        "Hey everyone! I'm thinking of organizing a team outing this weekend.\nWould you be interested in a hiking trip or a beach day?",
+      teaser: "Hey everyone! I'm thinking of organizing a team outing.",
+      avatar: "https://i.pravatar.cc/150?u=bob",
     },
     {
       name: "Emily Davis",
       email: "emilydavis@example.com",
       subject: "Re: Question about Budget",
       date: "2 days ago",
-      teaser:
-        "I've reviewed the budget numbers you sent over.\nCan we set up a quick call to discuss some potential adjustments?",
+      teaser: "I've reviewed the budget numbers you sent over.",
+      avatar: "https://i.pravatar.cc/150?u=emily",
     },
     {
       name: "Michael Wilson",
       email: "michaelwilson@example.com",
       subject: "Important Announcement",
       date: "1 week ago",
-      teaser:
-        "Please join us for an all-hands meeting this Friday at 3 PM.\nWe have some exciting news to share about the company's future.",
+      teaser: "Please join us for an all-hands meeting this Friday at 3 PM.",
+      avatar: "https://i.pravatar.cc/150?u=michael",
     },
     {
       name: "Sarah Brown",
       email: "sarahbrown@example.com",
       subject: "Re: Feedback on Proposal",
       date: "1 week ago",
-      teaser:
-        "Thank you for sending over the proposal. I've reviewed it and have some thoughts.\nCould we schedule a meeting to discuss my feedback in detail?",
-    },
-    {
-      name: "David Lee",
-      email: "davidlee@example.com",
-      subject: "New Project Idea",
-      date: "1 week ago",
-      teaser:
-        "I've been brainstorming and came up with an interesting project concept.\nDo you have time this week to discuss its potential impact and feasibility?",
-    },
-    {
-      name: "Olivia Wilson",
-      email: "oliviawilson@example.com",
-      subject: "Vacation Plans",
-      date: "1 week ago",
-      teaser:
-        "Just a heads up that I'll be taking a two-week vacation next month.\nI'll make sure all my projects are up to date before I leave.",
-    },
-    {
-      name: "James Martin",
-      email: "jamesmartin@example.com",
-      subject: "Re: Conference Registration",
-      date: "1 week ago",
-      teaser:
-        "I've completed the registration for the upcoming tech conference.\nLet me know if you need any additional information from my end.",
-    },
-    {
-      name: "Sophia White",
-      email: "sophiawhite@example.com",
-      subject: "Team Dinner",
-      date: "1 week ago",
-      teaser:
-        "To celebrate our recent project success, I'd like to organize a team dinner.\nAre you available next Friday evening? Please let me know your preferences.",
+      teaser: "Thank you for sending over the proposal. I've reviewed it.",
+      avatar: "https://i.pravatar.cc/150?u=sarah",
     },
   ],
 }
@@ -241,16 +210,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <a
                   href="#"
                   key={mail.email}
-                  className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-col items-start gap-2 border-b p-4 text-sm leading-tight whitespace-nowrap last:border-b-0"
+                  className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-row items-center gap-3 border-b p-4 text-sm leading-tight last:border-b-0 transition-colors"
                 >
-                  <div className="flex w-full items-center gap-2">
-                    <span>{mail.name}</span>{" "}
-                    <span className="ml-auto text-xs">{mail.date}</span>
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarImage src={mail.avatar} alt={mail.name} />
+                    <AvatarFallback>{mail.name.substring(0,2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <div className="flex w-full items-center justify-between">
+                      <span className="font-semibold text-foreground truncate">{mail.name}</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                        {mail.date}
+                      </span>
+                    </div>
+                    
+                    <span className="line-clamp-1 text-muted-foreground text-xs mt-1">
+                      {mail.teaser}
+                    </span>
                   </div>
-                  <span className="font-medium">{mail.subject}</span>
-                  <span className="line-clamp-2 w-[260px] text-xs whitespace-break-spaces">
-                    {mail.teaser}
-                  </span>
                 </a>
               ))}
             </SidebarGroupContent>
