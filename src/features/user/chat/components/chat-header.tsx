@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import { CircleArrowLeft, User } from "lucide-react";
+import { Icons } from "@/utils/constants";
+import { CircleArrowLeft, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 
 type Props = {
@@ -11,8 +12,9 @@ export default function ChatHeader({ imageUrl, name }: Props) {
     return (
         <Card
             className="w-full flex
+            flex-row
             rounded-lg
-            items-start
+            items-center
             p-2
             justify-between"
         >
@@ -28,6 +30,11 @@ export default function ChatHeader({ imageUrl, name }: Props) {
                     </AvatarFallback>
                 </Avatar>
                 <h2 className="font-semibold">{name}</h2>
+            </div>
+            <div className="flex items-center gap-5">
+                <Icons.Phone/>
+                <Icons.Video />
+                <Info/>
             </div>
         </Card>
     );
