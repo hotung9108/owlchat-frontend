@@ -62,7 +62,7 @@ export default function ConversationDetailPage() {
         <ConversationsLayout>
             {conversation === undefined ? (
                 <div className="w-full h-full flex items-center justify-center">
-                    <Loader2 className="h-8 w-8" />
+                    <LoadingLogo/>
                 </div>
             ) : conversation === null ? (
                 <div className="w-full h-full flex items-center justify-center">
