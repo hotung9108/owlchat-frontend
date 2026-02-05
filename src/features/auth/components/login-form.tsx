@@ -21,7 +21,7 @@ export function LoginForm({
     e.preventDefault()
     const isSuccess = true
     if (isSuccess) {
-      navigate("/chat")
+      navigate("/conversations")
     } else {
       setAlertMessage("Invalid email or password. Please try again.")
     }
