@@ -5,11 +5,11 @@ import App from "./App.tsx";
 import { ThemeProvider } from "./providers/theme-provider.tsx";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 createRoot(document.getElementById("root")!).render(
-    <ThemeProvider>
-        <TooltipProvider>
-            <StrictMode>
+    <StrictMode>
+        <ThemeProvider>
+            <TooltipProvider>
                 <App />
-            </StrictMode>
-        </TooltipProvider>
-    </ThemeProvider>
+            </TooltipProvider>
+        </ThemeProvider>
+    </StrictMode>,
 );

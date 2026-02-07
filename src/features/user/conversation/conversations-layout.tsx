@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import ItemList from "../item-list";
 import UserLayout from "../user-layout";
-import LoadingLogo from "@/components/shared/LoadingLogo";
+import LoadingLogo from "@/components/shared/loading-logo";
 import ConversationItem from "./conversation-item";
 
 type Props = React.PropsWithChildren<{}>;
@@ -16,21 +16,18 @@ const mockConversations: Conversation[] = [
     { id: "1", imageUrl: "/images/user1.jpg", username: "John Doe" },
     { id: "2", imageUrl: "/images/user2.jpg", username: "Jane Smith" },
     { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "4", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "5", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "6", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "7", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "8", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "9", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "10", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "11", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "12", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "13", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "14", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
+    { id: "15", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
 
 ];
 export default function ConversationsLayout({ children }: Props) {

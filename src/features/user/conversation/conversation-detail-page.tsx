@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import LoadingLogo from "@/components/shared/LoadingLogo";
+import LoadingLogo from "@/components/shared/loading-logo";
 import ConversationContainer from "./conversation-container";
 import ConversationsLayout from "./conversations-layout";
 import { Loader2 } from "lucide-react";

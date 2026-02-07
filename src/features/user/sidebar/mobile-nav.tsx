@@ -26,7 +26,7 @@ export default function MobileNav() {
                             <li key={id} className="relative">
                                 <Link to={path.href}>
                                     <Tooltip>
-                                        <TooltipTrigger>
+                                        <TooltipTrigger asChild>
                                             <Button
                                                 size="icon"
                                                 variant={

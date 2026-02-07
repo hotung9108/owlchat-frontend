@@ -22,7 +22,7 @@ export default function DesktopNav() {
                             <li key={id} className="relative">
                                 <Link to={path.href}>
                                     <Tooltip>
-                                        <TooltipTrigger>
+                                        <TooltipTrigger asChild>
                                             <Button
                                                 size="icon"
                                                 variant={
@@ -51,7 +51,7 @@ export default function DesktopNav() {
             <div className="flex flex-col items-center gap-4">
                 <ModeToggle />
                 <Tooltip>
-                    <TooltipTrigger>
+                    <TooltipTrigger asChild>
                         <Button size="icon" variant="outline">
                             <Icons.Notification />
                         </Button>
@@ -61,7 +61,7 @@ export default function DesktopNav() {
                     </TooltipContent>
                 </Tooltip>
                 <Tooltip>
-                    <TooltipTrigger>
+                    <TooltipTrigger asChild>
                         <Button size="icon" variant="outline">
                             <Icons.Settings />
                         </Button>
