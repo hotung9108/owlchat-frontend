@@ -2,7 +2,6 @@ import { useParams } from "react-router-dom";
 import LoadingLogo from "@/components/shared/loading-logo";
 import ConversationContainer from "./conversation-container";
 import ConversationsLayout from "./conversations-layout";
-import { Loader2 } from "lucide-react";
 import ChatHeader from "../chat/components/chat-header";
 import ChatBody from "../chat/components/chat-body";
 import ChatInput from "../chat/components/chat-input";

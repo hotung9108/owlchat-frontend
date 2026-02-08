@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import owlLogo from "@/assets/owl-logo/black/owl-512.png";
-export default function ConversationsFallback() {
+export default function ChatFallback() {
     return (
         <Card
             className="hidden lg:flex
