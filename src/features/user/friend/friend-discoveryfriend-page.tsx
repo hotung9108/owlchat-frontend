@@ -45,7 +45,7 @@ export default function FriendDiscoveryFriendPage(props: Props) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {suggestions.map((suggestion, index) => (
-                    <Card key={index} className="p-4 justify-between">
+                    <Card key={index} className="p-4 justify-between transition-[color,box-shadow] hover:shadow-md hover:ring-1 hover:ring-ring/50">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-full flex items-center justify-center">
                                 {suggestion.avatar}

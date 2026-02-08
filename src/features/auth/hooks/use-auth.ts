@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
-import { logout, login, refreshToken } from "../services/accountService";
+import { logout, login, refreshToken } from "../services/account-service";
 
-import type {
-    LoginRequest,
-    LoginResponse,
-} from "../types/auth.type";
+import type { LoginRequest, LoginResponse } from "../types/auth.type";
 export function useAuth() {
     const [user, setUser] = useState<LoginResponse | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -22,9 +19,14 @@ export function useAuth() {
     const handleLogin = async (params: LoginRequest) => {
         try {
             const response = await login(params);
+            if (!response.status) {
+                throw new Error(
+                    "Your account has been locked. Please contact support.",
+                );
+            }
             localStorage.setItem("accessToken", response.accessToken);
             localStorage.setItem("refreshToken", response.refreshToken);
-            localStorage.setItem("user", JSON.stringify(response));
+            // localStorage.setItem("user", JSON.stringify(response));
             setUser(response);
         } catch (error) {
             console.error("Login failed:", error);
@@ -40,7 +42,7 @@ export function useAuth() {
             }
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
-            localStorage.removeItem("user");
+            // localStorage.removeItem("user");
             setUser(null);
         } catch (error) {
             console.error("Logout failed:", error);
