@@ -5,6 +5,7 @@ import UserProfilePage from "@/features/user-profile/pages/user-profile-page";
 import ConversationPage from "@/features/user/conversation/conversation-page";
 import ConversationDetailPage from "@/features/user/conversation/conversation-detail-page";
 import FriendPage from "@/features/user/friend/friend-page";
+import AdminPage from "@/features/admin/admin-page";
 
 const AppRoutes = () => {
     return (
@@ -20,6 +21,7 @@ const AppRoutes = () => {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/profile" element={<UserProfilePage />} />
             
+            <Route path="/admin" element={<AdminPage />}/>
         </Routes>
     );
 };
