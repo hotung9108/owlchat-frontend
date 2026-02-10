@@ -6,8 +6,19 @@ import { useUserNavigation } from "../chat/hooks/userUserNavigation";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/utils/constants";
 import { ModeToggle } from "@/components/mode-toggle";
+import { useAuth } from "@/hooks/use-auth";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 export default function DesktopNav() {
     const paths = useUserNavigation();
+    const { logout } = useAuth();
+    const handleLogout = async () => {
+        try {
+            await logout();
+            window.location.href = "/login"; 
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    };
     return (
         <Card
             className="hidden lg:flex 
@@ -60,7 +71,7 @@ export default function DesktopNav() {
                         <div className="">Notification</div>
                     </TooltipContent>
                 </Tooltip>
-                <Tooltip>
+                {/* <Tooltip>
                     <TooltipTrigger asChild>
                         <Button size="icon" variant="outline">
                             <Icons.Settings />
@@ -69,7 +80,19 @@ export default function DesktopNav() {
                     <TooltipContent side="left" align="center">
                         <div className="">Setting</div>
                     </TooltipContent>
-                </Tooltip>
+                </Tooltip> */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="outline">
+                            <Icons.Settings />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleLogout}>
+                            Logout
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </Card>
     );

@@ -3,6 +3,9 @@ import ItemList from "../item-list";
 import UserLayout from "../user-layout";
 import LoadingLogo from "@/components/shared/loading-logo";
 import ConversationItem from "./conversation-item";
+import { User } from "lucide-react";
+import { useChatUser } from "@/hooks/use-chat-user";
+import { data } from "react-router-dom";
 
 type Props = React.PropsWithChildren<{}>;
 
@@ -12,34 +15,41 @@ type Conversation = {
     username: string;
     isGroup?: boolean;
 };
-const mockConversations: Conversation[] = [
-    { id: "1", imageUrl: "/images/user1.jpg", username: "John Doe" },
-    { id: "2", imageUrl: "/images/user2.jpg", username: "Jane Smith" },
-    { id: "3", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "4", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "5", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "6", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "7", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "8", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "9", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "10", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "11", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "12", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "13", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "14", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-    { id: "15", imageUrl: "/images/user3.jpg", username: "Alice Johnson" },
-
-];
 export default function ConversationsLayout({ children }: Props) {
     const [conversations, setConversations] = useState<Conversation[] | null>(
         null,
     );
+    const { loading, error, getChatsByMemberId } = useChatUser();
+
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setConversations(mockConversations);
-        }, 2000);
-        return () => clearTimeout(timer);
+        const fetchConversations = async () => {
+            try {
+                const data = await getChatsByMemberId(
+                    "accountId", 
+                    "requesterId", 
+                    "", 
+                    0,
+                    10, 
+                    false, 
+                );
+                const mappedConversations = data.map((chat: any) => ({
+                    id: chat.id,
+                    imageUrl: chat.avatar || <User/>,
+                    username: chat.name,
+                    isGroup: chat.type === "GROUP",
+                }));
+                console.log(data);
+
+                setConversations(mappedConversations);
+            } catch (err) {
+                console.error("Error fetching conversations:", err);
+            }
+        };
+
+        fetchConversations();
     }, []);
+   
+
     return (
         <UserLayout>
             <ItemList title="Conversations">

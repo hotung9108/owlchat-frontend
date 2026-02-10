@@ -5,6 +5,7 @@ const FRIENDSHIP_API = `${API_ENDPOINTS.SOCIAL_SERVICE}/friendship`;
 
 export const friendshipService = {
   async getFriendships(
+    accountId: string | null,
     requesterId: string | null,
     page: number = 0,
     size: number = 10,
@@ -14,6 +15,7 @@ export const friendshipService = {
   ) {
     try {
       const params: Record<string, any> = {
+        requesterId,
         page,
         size,
         ascSort,
@@ -23,7 +25,7 @@ export const friendshipService = {
 
       const response = await apiClient.get(FRIENDSHIP_API, {
         headers: {
-          "X-Account-Id": requesterId || "",
+          "X-Account-Id": accountId || "",
         },
         params,
       });
@@ -33,11 +35,14 @@ export const friendshipService = {
     }
   },
 
-  async getFriendshipById(requesterId: string | null, id: string) {
+  async getFriendshipById(accountId: string | null, requesterId: string | null, id: string) {
     try {
       const response = await apiClient.get(`${FRIENDSHIP_API}/${id}`, {
         headers: {
-          "X-Account-Id": requesterId || "",
+          "X-Account-Id": accountId || "",
+        },
+        params: {
+          requesterId,
         },
       });
       return response.data;
@@ -46,11 +51,14 @@ export const friendshipService = {
     }
   },
 
-  async getFriendshipWithUser(requesterId: string | null, userId: string) {
+  async getFriendshipWithUser(accountId: string | null, requesterId: string | null, userId: string) {
     try {
       const response = await apiClient.get(`${FRIENDSHIP_API}/user/${userId}`, {
         headers: {
-          "X-Account-Id": requesterId || "",
+          "X-Account-Id": accountId || "",
+        },
+        params: {
+          requesterId,
         },
       });
       return response.data;
@@ -59,11 +67,14 @@ export const friendshipService = {
     }
   },
 
-  async deleteFriendship(requesterId: string | null, id: string) {
+  async deleteFriendship(accountId: string | null, requesterId: string | null, id: string) {
     try {
       const response = await apiClient.delete(`${FRIENDSHIP_API}/${id}`, {
         headers: {
-          "X-Account-Id": requesterId || "",
+          "X-Account-Id": accountId || "",
+        },
+        params: {
+          requesterId,
         },
       });
       return response.data;

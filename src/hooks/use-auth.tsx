@@ -1,18 +1,19 @@
 import { useState, useEffect } from "react";
 import { logout, login, refreshToken } from "../services/account-service";
 
-import type { LoginRequest, LoginResponse } from "../types/auth.type";
+// import type { LoginRequest, LoginResponse } from "../features/auth/types/auth.type";
+import type { LoginRequest, LoginResponse } from "@/types/auth.type";
 export function useAuth() {
-    const [user, setUser] = useState<LoginResponse | null>(null);
+    // const [user, setUser] = useState<LoginResponse | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
-        const storedToken = localStorage.getItem("accessToken");
-        const storedUser = localStorage.getItem("user");
+        // const storedToken = localStorage.getItem("accessToken");
+        // const storedUser = localStorage.getItem("user");
 
-        if (storedToken && storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
+        // if (storedToken && storedUser) {
+        //     setUser(JSON.parse(storedUser));
+        // }
         setLoading(false);
     }, []);
 
@@ -27,7 +28,7 @@ export function useAuth() {
             localStorage.setItem("accessToken", response.accessToken);
             localStorage.setItem("refreshToken", response.refreshToken);
             // localStorage.setItem("user", JSON.stringify(response));
-            setUser(response);
+            // setUser(response);
         } catch (error) {
             console.error("Login failed:", error);
             throw error;
@@ -43,7 +44,7 @@ export function useAuth() {
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
             // localStorage.removeItem("user");
-            setUser(null);
+            // setUser(null);
         } catch (error) {
             console.error("Logout failed:", error);
             throw error;
@@ -56,7 +57,7 @@ export function useAuth() {
             if (!refreshTokenValue) throw new Error("No refresh token found");
 
             const response = await refreshToken({
-                accessToken: refreshTokenValue,
+                refreshToken: refreshTokenValue,
             });
             localStorage.setItem("accessToken", response.accessToken);
         } catch (error) {
@@ -66,7 +67,7 @@ export function useAuth() {
     };
 
     return {
-        user,
+        // user,
         loading,
         login: handleLogin,
         logout: handleLogout,

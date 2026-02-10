@@ -1,8 +1,10 @@
 import { useState, useCallback } from "react";
-import friendshipService from "../services/friendship-service";
-import type { Friendship } from "../types/friendship.type";
-
-export const useFriendship = (requesterId: string | null) => {
+import type { Friendship } from "@/types/friendship.type";
+import friendshipService from "@/services/friendship-service";
+export const useFriendship = (
+    accountId: string | null = null,
+    requesterId: string | null = null,
+) => {
     const [friendships, setFriendships] = useState<Friendship[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -19,6 +21,7 @@ export const useFriendship = (requesterId: string | null) => {
             setError(null);
             try {
                 const data = await friendshipService.getFriendships(
+                    accountId,
                     requesterId,
                     page,
                     size,
@@ -36,7 +39,7 @@ export const useFriendship = (requesterId: string | null) => {
                 setLoading(false);
             }
         },
-        [requesterId],
+        [accountId, requesterId],
     );
 
     const fetchFriendshipById = useCallback(
@@ -45,6 +48,7 @@ export const useFriendship = (requesterId: string | null) => {
             setError(null);
             try {
                 const data = await friendshipService.getFriendshipById(
+                    accountId,
                     requesterId,
                     id,
                 );
@@ -59,7 +63,7 @@ export const useFriendship = (requesterId: string | null) => {
                 setLoading(false);
             }
         },
-        [requesterId],
+        [accountId, requesterId],
     );
 
     const fetchFriendshipWithUser = useCallback(
@@ -68,6 +72,7 @@ export const useFriendship = (requesterId: string | null) => {
             setError(null);
             try {
                 const data = await friendshipService.getFriendshipWithUser(
+                    accountId,
                     requesterId,
                     userId,
                 );
@@ -82,7 +87,7 @@ export const useFriendship = (requesterId: string | null) => {
                 setLoading(false);
             }
         },
-        [requesterId],
+        [accountId, requesterId],
     );
 
     const deleteFriendship = useCallback(
@@ -91,6 +96,7 @@ export const useFriendship = (requesterId: string | null) => {
             setError(null);
             try {
                 const message = await friendshipService.deleteFriendship(
+                    accountId,
                     requesterId,
                     id,
                 );
@@ -108,7 +114,7 @@ export const useFriendship = (requesterId: string | null) => {
                 setLoading(false);
             }
         },
-        [requesterId],
+        [accountId, requesterId],
     );
 
     return {
