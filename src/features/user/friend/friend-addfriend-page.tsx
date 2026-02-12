@@ -33,7 +33,7 @@ export default function FriendAddFriendPage(props: Props) {
             }
         };
         fetchFriendRequests();
-    }, [getReceiveFriendRequests]);
+    }, []);
     const handleAcceptFriendRequest = async (id: string) => {
         try {
             const request: FriendRequestResponseRequest = {

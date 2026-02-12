@@ -6,6 +6,7 @@ import ConversationItem from "./conversation-item";
 import { User } from "lucide-react";
 import { useChatUser } from "@/hooks/use-chat-user";
 import { data } from "react-router-dom";
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 type Props = React.PropsWithChildren<{}>;
 
@@ -14,32 +15,36 @@ type Conversation = {
     imageUrl: string;
     username: string;
     isGroup?: boolean;
+    newestMessageId?: string;
 };
 export default function ConversationsLayout({ children }: Props) {
     const [conversations, setConversations] = useState<Conversation[] | null>(
         null,
     );
     const { loading, error, getChatsByMemberId } = useChatUser();
+    const { profile, fetchUserProfile } = useUserProfile();
+    useEffect(() => {
+        fetchUserProfile();
+    }, [fetchUserProfile]);
 
     useEffect(() => {
         const fetchConversations = async () => {
             try {
                 const data = await getChatsByMemberId(
-                    "accountId", 
-                    "requesterId", 
-                    "", 
+                    null,
+                    null,
+                    "",
                     0,
-                    10, 
-                    false, 
+                    10,
+                    false,
                 );
                 const mappedConversations = data.map((chat: any) => ({
                     id: chat.id,
-                    imageUrl: chat.avatar || <User/>,
+                    imageUrl: chat.avatar || "",
                     username: chat.name,
                     isGroup: chat.type === "GROUP",
+                    newestMessageId: chat.newestMessageId,
                 }));
-                console.log(data);
-
                 setConversations(mappedConversations);
             } catch (err) {
                 console.error("Error fetching conversations:", err);
@@ -48,7 +53,6 @@ export default function ConversationsLayout({ children }: Props) {
 
         fetchConversations();
     }, []);
-   
 
     return (
         <UserLayout>
@@ -60,13 +64,15 @@ export default function ConversationsLayout({ children }: Props) {
                         Oh no, there are no conversations!
                     </p>
                 ) : (
-                    conversations.map((conversations) =>
-                        conversations.isGroup ? null : (
+                    conversations.map((c) =>
+                        c.isGroup ? null : (
                             <ConversationItem
-                                key={conversations.id}
-                                id={conversations.id}
-                                imageUrl={conversations.imageUrl}
-                                username={conversations.username}
+                                key={c.id}
+                                id={c.id}
+                                imageUrl={c.imageUrl}
+                                username={c.username}
+                                newestMessageId={c.newestMessageId}
+                                currentUserId={profile?.id}
                             />
                         ),
                     )

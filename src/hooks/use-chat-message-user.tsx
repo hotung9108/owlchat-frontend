@@ -256,6 +256,7 @@ export const useMessageUser = () => {
 
     return {
         messages,
+        setMessages, 
         loading,
         error,
         getMessagesByChatId,
