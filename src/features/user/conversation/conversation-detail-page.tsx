@@ -8,6 +8,7 @@ import ChatInput from "../chat/components/chat-input";
 import { useEffect, useRef, useState } from "react";
 import { useMessageUser } from "@/hooks/use-chat-message-user";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import type { MessageType } from "@/types/enum/mesage-type";
 
 export default function ConversationDetailPage() {
     const chatBodyRef = useRef<HTMLDivElement>(null);
@@ -20,6 +21,7 @@ export default function ConversationDetailPage() {
         error,
         getMessagesByChatId,
         postNewTextMessage,
+        postNewFileMessage,
     } = useMessageUser();
     const {
         profile,
@@ -52,9 +54,8 @@ export default function ConversationDetailPage() {
                         15,
                     );
                     if (newMessages.length < 15) {
-                        setHasMore(false); 
+                        setHasMore(false);
                     }
-                    
                 } catch (error) {
                     console.error("Error fetching messages:", error);
                 }
@@ -73,6 +74,14 @@ export default function ConversationDetailPage() {
             console.error("Failed to send message:", err);
         }
     };
+    const handleSendFile = async (file: File, type: MessageType) => {
+        try {
+            await postNewFileMessage(null, null, conversationId!, type, file);
+        } catch (err) {
+            console.error("Failed to send file:", err);
+        }
+    };
+
     // if (loading) {
     //     return (
     //         <div className="w-full h-full flex items-center justify-center">
@@ -107,7 +116,10 @@ export default function ConversationDetailPage() {
                         currentUserId={profile?.id}
                         onScroll={handleScroll} // Truyền hàm xử lý sự kiện cuộn
                     />
-                    <ChatInput onSendMessage={handleSendMessage} />
+                    <ChatInput
+                        onSendMessage={handleSendMessage}
+                        onSendFile={handleSendFile}
+                    />
                 </ConversationContainer>
             )}
         </ConversationsLayout>

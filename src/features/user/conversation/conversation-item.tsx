@@ -45,7 +45,7 @@ export default function ConversationItem({
                     if (otherId) {
                         const otherProfile = await fetchProfileById(otherId);
                         const otherName =
-                            otherProfile?.name??
+                            otherProfile?.name ??
                             // otherProfile?.displayName ??
                             // otherProfile?.username ??
                             otherId;
@@ -79,7 +79,9 @@ export default function ConversationItem({
                     // senderProfile?.username ??
                     msg.senderId;
 
-                if (msg?.content) {
+                if (msg?.type === "IMG") {
+                    setPreview(`${senderName}: Đã gửi một ảnh`);
+                } else if (msg?.content) {
                     setPreview(`${senderName}: ${msg.content}`);
                 }
             } catch {
