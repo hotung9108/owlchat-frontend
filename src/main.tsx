@@ -4,12 +4,15 @@ import "./index.css";
 import App from "./App.tsx";
 import { ThemeProvider } from "./providers/theme-provider.tsx";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
+import { WebSocketProvider } from "./providers/websocket-provider.tsx";
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
         <ThemeProvider>
-            <TooltipProvider>
-                <App />
-            </TooltipProvider>
+            {/* <WebSocketProvider> */}
+                <TooltipProvider>
+                    <App />
+                </TooltipProvider>
+            {/* </WebSocketProvider> */}
         </ThemeProvider>
     </StrictMode>,
 );

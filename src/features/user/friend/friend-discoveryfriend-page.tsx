@@ -1,10 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AudioWaveformIcon } from "lucide-react";
+import { AudioWaveformIcon, User } from "lucide-react";
 import { useFriend } from "@/hooks/use-friend";
 import { useUserProfile } from "@/hooks/use-user-profile";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import ErrorLogo from "@/components/shared/error-logo";
 import LoadingLogo from "@/components/shared/loading-logo";
 
@@ -13,7 +13,10 @@ type Props = {};
 export default function FriendDiscoveryFriendPage(props: Props) {
     const {
         profiles,
+        profile,
         fetchProfiles,
+        fetchUserProfile,
+        fetchProfileById,
         loading: profilesLoading,
         error: profilesError,
     } = useUserProfile();
@@ -28,7 +31,12 @@ export default function FriendDiscoveryFriendPage(props: Props) {
 
     useEffect(() => {
         fetchProfiles();
-    }, [fetchProfiles]);
+        fetchUserProfile();
+    }, []);
+    useEffect(() => {
+        console.log(profiles);
+    });
+    // handle add friend
     const handleAddFriend = async (userId: string) => {
         try {
             await postFriendRequest(null, null, { receiverId: userId });
@@ -38,12 +46,14 @@ export default function FriendDiscoveryFriendPage(props: Props) {
             setTimeout(() => setErrorMessage(null), 3000);
         }
     };
-    const filteredProfiles = profiles.filter((profile) =>
-        profile.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    const filteredProfiles = profiles.filter(
+        (p) =>
+            p.id !== profile?.id &&
+            p.name.toLowerCase().includes(searchTerm.toLowerCase()),
     );
-    if (profilesLoading || friendLoading) {
-        return <LoadingLogo />;
-    }
+    // if (profilesLoading || friendLoading) {
+    //     return <LoadingLogo />;
+    // }
 
     // if (profilesError || friendError) {
     //     return (
@@ -54,9 +64,9 @@ export default function FriendDiscoveryFriendPage(props: Props) {
     //         />
     //     );
     // }
-    if (errorMessage) {
-        return <ErrorLogo errorMessage={errorMessage} />;
-    }
+    // if (errorMessage) {
+    //     return <ErrorLogo errorMessage={errorMessage} />;
+    // }
     return (
         <>
             <div className="mb-6">
@@ -78,7 +88,7 @@ export default function FriendDiscoveryFriendPage(props: Props) {
                             className="p-4 justify-between transition-[color,box-shadow] hover:shadow-md hover:ring-1 hover:ring-ring/50"
                         >
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-full flex items-center justify-center">
+                                <div className="w-16 h-16 rounded-full flex items-center justify-center bg-muted">
                                     {profile.avatar ? (
                                         <img
                                             src={profile.avatar}
@@ -86,16 +96,22 @@ export default function FriendDiscoveryFriendPage(props: Props) {
                                             className="w-full h-full rounded-full"
                                         />
                                     ) : (
-                                        <AudioWaveformIcon />
+                                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                                            <User className="w-10 h-10" />
+                                        </div>
                                     )}
                                 </div>
 
                                 <div>
-                                    <h3 className="text-lg font-bold">
+                                    <h3 className="text-lg font-bold text-primary">
                                         {profile.name}
                                     </h3>
-                                    <p className="text-sm text-gray-400">
-                                        {"No status available"}
+                                    <p className="text-sm text-muted-foreground">
+                                        {profile.email}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {profile.phoneNumber ||
+                                            "No phone number"}
                                     </p>
                                 </div>
                             </div>

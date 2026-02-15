@@ -50,6 +50,7 @@ export const useUserProfile = () => {
         try {
             const data = await userProfileService.getProfileById(id);
             setProfile(data);
+            return data; 
         } catch (err: any) {
             setError(err.message || "Failed to fetch profile");
         } finally {
@@ -63,6 +64,7 @@ export const useUserProfile = () => {
         try {
             const data = await userProfileService.getUserProfile(accountId);
             setProfile(data);
+            return data;
         } catch (err: any) {
             setError(err.message || "Failed to fetch user profile");
         } finally {

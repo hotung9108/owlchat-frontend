@@ -38,7 +38,7 @@ export function LoginForm({
             setTimeout(() => {
                 setShowAlert(false);
                 navigate("/conversations");
-            }, 1000);
+            }, 2000);
         } catch (error: any) {
             const errorMessage =
                 error.response?.data?.message ||
@@ -48,7 +48,7 @@ export function LoginForm({
             setShowAlert(true);
             setTimeout(() => {
                 setShowAlert(false);
-            }, 1000);
+            }, 2000);
         }
     };
     return (

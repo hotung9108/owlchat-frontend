@@ -6,7 +6,7 @@ import ChatHeader from "../chat/components/chat-header";
 import ChatBody from "../chat/components/chat-body";
 import ChatInput from "../chat/components/chat-input";
 import { useEffect, useRef, useState } from "react";
-import { useMessageUser } from "@/hooks/use-message-user";
+import { useMessageUser } from "@/hooks/use-chat-message-user";
 import { useUserProfile } from "@/hooks/use-user-profile";
 
 export default function ConversationDetailPage() {
