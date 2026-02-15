@@ -51,9 +51,9 @@ export default function FriendDiscoveryFriendPage(props: Props) {
             p.id !== profile?.id &&
             p.name.toLowerCase().includes(searchTerm.toLowerCase()),
     );
-    if (profilesLoading || friendLoading) {
-        return <LoadingLogo />;
-    }
+    // if (profilesLoading || friendLoading) {
+    //     return <LoadingLogo />;
+    // }
 
     // if (profilesError || friendError) {
     //     return (

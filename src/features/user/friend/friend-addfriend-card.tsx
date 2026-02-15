@@ -6,6 +6,7 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 
 type FriendRequestCardProps = {
     friendId: string;
+    requestId: string;
     status: "PENDING" | "ACCEPTED" | "REJECTED"; // Thêm trạng thái
     onAccept: (id: string) => void;
     onDecline: (id: string) => void;
@@ -13,16 +14,19 @@ type FriendRequestCardProps = {
 
 export default function FriendRequestCard({
     friendId,
+    requestId,
     status,
     onAccept,
     onDecline,
 }: FriendRequestCardProps) {
     const { profile, fetchProfileById, loading, error } = useUserProfile();
-
+    
     useEffect(() => {
         fetchProfileById(friendId); // Fetch profile của bạn bè
     }, [friendId, fetchProfileById]);
-
+    useEffect(() => {
+        console.log(friendId);
+    })
     if (loading) {
         return <p className="text-muted text-center">Loading...</p>;
     }
@@ -57,29 +61,27 @@ export default function FriendRequestCard({
                     <p className="text-sm text-muted-foreground">
                         {profile?.email || "No email"}
                     </p>
+                    <p className="text-sm text-muted-foreground italic">
+                    {profile?.name || "This user"} wants to be your friend!
+                </p>
                 </div>
             </div>
 
             {/* Message */}
-            <div className="mt-4">
-                <p className="text-sm text-muted-foreground italic">
-                    {profile?.name || "This user"} wants to be your friend!
-                </p>
-            </div>
-
+            
             {/* Actions */}
             <div className="mt-6 flex justify-between items-center">
                 {status === "PENDING" && (
                     <div className="flex gap-2">
                         <Button
                             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg shadow-md hover:bg-primary-foreground hover:text-primary"
-                            onClick={() => onAccept(friendId)}
+                            onClick={() => onAccept(requestId)}
                         >
                             Accept
                         </Button>
                         <Button
                             className="px-4 py-2 bg-destructive text-white rounded-lg shadow-md hover:bg-red-600"
-                            onClick={() => onDecline(friendId)}
+                            onClick={() => onDecline(requestId)}
                         >
                             Decline
                         </Button>
@@ -89,13 +91,13 @@ export default function FriendRequestCard({
                     <div className="flex gap-2">
                         <Button
                             className="px-4 py-2 bg-destructive text-white rounded-lg shadow-md hover:bg-red-600"
-                            onClick={() => onDecline(friendId)}
+                            onClick={() => onDecline(requestId)}
                         >
                             Decline
                         </Button>
                     </div>
                 )}
-                {status === "DECLINED" && (
+                {status === "REJECTED" && (
                     <div className="flex gap-2">
                         <Button
                             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg shadow-md hover:bg-primary-foreground hover:text-primary"
