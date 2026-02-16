@@ -12,6 +12,9 @@ export default function ChatInput({
     onSendFile,
 }: ChatInputProps) {
     const [message, setMessage] = useState("");
+    const [previewFiles, setPreviewFiles] = useState<
+        { file: File; type: MessageType }[]
+    >([]); // State để lưu danh sách file được dán
     const [showMoreOptions, setShowMoreOptions] = useState(false); // Trạng thái hiển thị thêm nút
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -24,10 +27,12 @@ export default function ChatInput({
         const files = e.target.files;
         if (!files || files.length === 0) return;
 
-        const file = files[0];
-        const type = detectFileType(file);
+        const newFiles = Array.from(files).map((file) => ({
+            file,
+            type: detectFileType(file),
+        }));
 
-        onSendFile(file, type);
+        setPreviewFiles((prevFiles) => [...prevFiles, ...newFiles]); // Thêm file mới vào danh sách
         e.target.value = "";
     };
 
@@ -42,23 +47,33 @@ export default function ChatInput({
                 if (!file) continue;
 
                 const type = detectFileType(file);
-                onSendFile(file, type);
+                setPreviewFiles((prevFiles) => [...prevFiles, { file, type }]); // Thêm file mới vào danh sách
                 e.preventDefault();
                 return;
             }
         }
     };
     const handleSend = () => {
+        previewFiles.forEach(({ file, type }) => {
+            onSendFile(file, type);
+        });
+
+        setPreviewFiles([]);
+
         if (message.trim() !== "") {
             onSendMessage(message);
             setMessage("");
         }
     };
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSend();
         }
+    };
+    const removePreviewFile = (index: number) => {
+        setPreviewFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
     };
 
     return (
@@ -100,6 +115,7 @@ export default function ChatInput({
                         ref={fileInputRef}
                         type="file"
                         className="hidden"
+                        multiple // Cho phép chọn nhiều file
                         onChange={handleFileChange}
                     />
                     {/* <button className="p-2 rounded-full hover:bg-secondary">
@@ -122,6 +138,37 @@ export default function ChatInput({
                     Send
                 </button>
             </div>
+            {previewFiles.length > 0 && (
+                <div className="mt-2 p-2 border border-border rounded-lg bg-card flex flex-wrap gap-2">
+                    {previewFiles.map(({ file, type }, index) => (
+                        <div
+                            key={index}
+                            className="relative border border-border rounded-lg p-2"
+                        >
+                            {type === "IMG" && (
+                                <img
+                                    src={URL.createObjectURL(file)}
+                                    alt="Preview"
+                                    className="rounded-lg max-w-[100px] max-h-[100px] object-cover"
+                                />
+                            )}
+                            {type === "VID" && (
+                                <video
+                                    controls
+                                    src={URL.createObjectURL(file)}
+                                    className="rounded-lg max-w-[100px] max-h-[100px]"
+                                />
+                            )}
+                            <button
+                                className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full p-1"
+                                onClick={() => removePreviewFile(index)}
+                            >
+                                X
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
         </Card>
     );
 }

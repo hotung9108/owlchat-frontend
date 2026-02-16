@@ -57,7 +57,7 @@ export default function ConversationsLayout({ children }: Props) {
     return (
         <UserLayout>
             <ItemList title="Conversations">
-                {conversations === null ? (
+                {conversations === null || !profile? (
                     <LoadingLogo />
                 ) : conversations.length === 0 ? (
                     <p className="text-center text-gray-500 mt-4">

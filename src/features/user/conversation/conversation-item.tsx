@@ -68,7 +68,12 @@ export default function ConversationItem({
                 if (!msg) return;
 
                 if (msg?.senderId === currentUserId) {
-                    if (msg?.content) setPreview(`You: ${msg.content}`);
+                    // Nếu người gửi là bạn
+                    if (msg?.type === "IMG") {
+                        setPreview(`You: Đã gửi một ảnh`);
+                    } else if (msg?.content) {
+                        setPreview(`You: ${msg.content}`);
+                    }
                     return;
                 }
 

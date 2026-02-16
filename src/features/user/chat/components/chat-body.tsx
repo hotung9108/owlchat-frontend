@@ -129,6 +129,9 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                     Download File
                                 </a>
                             )}
+                            {message.type === "SYSTEM_MESSAGE" &&(
+                                <p>{message.content}</p>
+                            )}
 
                             <small className="text-xs block mt-1">
                                 {new Date(message.sentDate).toLocaleString()}
