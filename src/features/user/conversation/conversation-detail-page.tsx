@@ -40,6 +40,10 @@ export default function ConversationDetailPage() {
 
         fetchProfile();
     }, [fetchUserProfile]);
+    useEffect(() => {
+        setPage(0);
+        setHasMore(true);
+    }, [conversationId]);
 
     useEffect(() => {
         if (conversationId) {
