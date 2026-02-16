@@ -86,7 +86,15 @@ export const messageUserService = {
     type: string,
     file: File
   ): Promise<any> {
-    const headers = accountId ? { "X-Account-Id": accountId } : undefined;
+    // const headers = accountId ? { "X-Account-Id": accountId } : undefined;
+    const headers: Record<string, string> = {
+        "Content-Type": "multipart/form-data",
+        "chatId": chatId, // Thêm chatId vào header
+        "type": type,
+    };
+    if (accountId) {
+        headers["X-Account-Id"] = accountId;
+    }
     const params = { requesterId };
     const formData = new FormData();
     formData.append("chatId", chatId);
@@ -94,10 +102,11 @@ export const messageUserService = {
     formData.append("file", file);
 
     const response = await apiClient.post(`${MESSAGE_BASE_URL}/resource/upload`, formData, {
-      headers: {
-        ...headers,
-        "Content-Type": "multipart/form-data",
-      },
+      // headers: {
+      //   ...headers,
+      //   "Content-Type": "multipart/form-data",
+      // },
+      headers,
       params,
     });
     return response.data;

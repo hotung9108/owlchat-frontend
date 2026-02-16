@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { Message } from "@/types/message.type";
+import { messageUserService } from "@/services/message-user-service";
 
 type ChatBodyProps = {
     messages: Message[];
@@ -9,8 +10,11 @@ type ChatBodyProps = {
 
 const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
     ({ messages, currentUserId, onScroll }, ref) => {
+        const [imageCache, setImageCache] = useState<Record<string, string>>(
+            {},
+        );
         const [prevScrollTop, setPrevScrollTop] = useState<number>(0);
-        const isScrolling = useRef(false); 
+        const isScrolling = useRef(false);
 
         const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
             const target = e.target as HTMLDivElement;
@@ -39,7 +43,37 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                 isScrolling.current = false;
             }
         }, [messages, ref, prevScrollTop]);
+        const fetchImage = async (messageId: string) => {
+            try {
+                const imageData: { contentType: string; resource: Blob } =
+                    await messageUserService.getMessageFile(
+                        null,
+                        null,
+                        messageId,
+                    );
 
+                // Tạo URL từ Blob
+                const imageUrl = URL.createObjectURL(imageData.resource);
+
+                // Lưu vào cache
+                setImageCache((prevCache) => ({
+                    ...prevCache,
+                    [messageId]: imageUrl,
+                }));
+            } catch (error) {
+                console.error(
+                    `Failed to fetch image for messageId: ${messageId}`,
+                    error,
+                );
+            }
+        };
+        useEffect(() => {
+            messages.forEach((message) => {
+                if (message.type === "IMG" && !imageCache[message.id]) {
+                    fetchImage(message.id);
+                }
+            });
+        }, [messages]);
         return (
             <div
                 ref={ref}
@@ -59,14 +93,44 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                         <div
                             key={message.id}
                             className={`p-2 rounded-lg text-sm break-words
-                                ${isMe
-                                    ? "bg-primary text-primary-foreground self-end max-w-[75%]"
-                                    : "bg-muted text-muted-foreground self-start max-w-[60%]"
-                                }
-                            `}
+                ${
+                    isMe
+                        ? "bg-primary text-primary-foreground self-end max-w-[60%]"
+                        : "bg-muted text-muted-foreground self-start max-w-[60%]"
+                }
+            `}
                         >
-                            <p>{message.content}</p>
-                            <small className="text-xs">
+                            {message.type === "TEXT" && (
+                                <p>{message.content}</p>
+                            )}
+
+                            {message.type === "IMG" && (
+                                <img
+                                    src={imageCache[message.id]} 
+                                    alt="sent-img"
+                                    className="rounded-lg max-w-[350px] max-h-[350px] object-cover"
+                                />
+                            )}
+
+                            {message.type === "VID" && (
+                                <video
+                                    controls
+                                    src={message.content}
+                                    className="rounded-lg max-w-full"
+                                />
+                            )}
+
+                            {message.type === "GENERIC_FILE" && (
+                                <a
+                                    href={message.content}
+                                    target="_blank"
+                                    className="underline"
+                                >
+                                    Download File
+                                </a>
+                            )}
+
+                            <small className="text-xs block mt-1">
                                 {new Date(message.sentDate).toLocaleString()}
                             </small>
                         </div>
@@ -74,7 +138,6 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                 })}
             </div>
         );
-    }
+    },
 );
-
 export default ChatBody;
