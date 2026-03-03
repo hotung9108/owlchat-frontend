@@ -18,10 +18,10 @@ export default function AdminSidebarItem({
       className={`
         w-full flex items-center gap-2 rounded-md px-3 py-2
         text-base font-semibold
-        transition-colors
+        transition-colors cursor-pointer
         ${
           active
-            ? "bg-primary/15 text-foreground"
+            ? "bg-primary/90 text-foreground font-semibold brightness-100"
             : "text-foreground/85 hover:bg-muted/50 hover:text-foreground"
         }
       `}

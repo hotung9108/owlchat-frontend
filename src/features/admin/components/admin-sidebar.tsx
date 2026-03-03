@@ -1,15 +1,11 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import owlLogo from "@/assets/owl-logo/black/owl-512.png";
 import AdminSidebarItem from "./admin-sidebar-item";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator";
 import AdminSidebarGroup from "./admin-sidebar-group";
-import { useLocation } from "react-router-dom"
-import type { SidebarGroup, UserInfor } from "../admin-sidebar.config";
+import { useLocation, useNavigate } from "react-router-dom"
+import type { SidebarGroup, UserInfor } from "../configs/admin-sidebar.config";
+import AdminSidebarUser from "./admin-sidebar-user";
 
 interface AdminSidebarProps {
   groups: SidebarGroup[]
@@ -19,6 +15,7 @@ interface AdminSidebarProps {
 export default function AdminSidebar({groups, user_infor}: AdminSidebarProps) {
 
     const { pathname } = useLocation()
+    const navigate = useNavigate()
     
     return (
         <Card className="h-full flex flex-col gap-4">
@@ -58,9 +55,9 @@ export default function AdminSidebar({groups, user_infor}: AdminSidebarProps) {
                                     label={item.label}
                                     icon={item.icon}
                                     active={pathname.startsWith(item.href)}
-                                    onClick={() => {
-                                        // router.push(item.href)
-                                    }}
+                                    onClick={
+                                        () => navigate(item.href)
+                                    }
                                     />
                                 ))}
                                 </nav>
@@ -69,38 +66,12 @@ export default function AdminSidebar({groups, user_infor}: AdminSidebarProps) {
                     </div>
                 </div>
             </CardContent>
-
+            
             <div>
                 <Separator />
 
                 <CardFooter className="p-0">
-                    <button
-                    type="button"
-                    className="
-                        w-full flex items-center gap-3 p-4
-                        text-left
-                        hover:bg-muted/60
-                        focus:outline-none focus-visible:ring-2 focus-visible:ring-ring
-                        transition-colors cursor-pointer
-                    "
-                    onClick={() => {
-                        // handle click (open profile / menu / logout, etc.)
-                    }}
-                    >
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={user_infor.avatar} alt="Account avatar" />
-                        <AvatarFallback>OM</AvatarFallback>
-                    </Avatar>
-
-                    <div className="flex flex-col leading-tight">
-                        <span className="text-sm font-medium text-foreground">
-                        {user_infor.display_name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                        {user_infor.email}
-                        </span>
-                    </div>
-                    </button>
+                    <AdminSidebarUser user_infor={user_infor}></AdminSidebarUser>
                 </CardFooter>
             </div>
         </Card>
