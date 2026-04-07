@@ -6,7 +6,7 @@ import ConversationItem from "./conversation-item";
 import { User } from "lucide-react";
 import { useChatUser } from "@/hooks/use-chat-user";
 import { data } from "react-router-dom";
-import { useUserProfile } from "@/hooks/use-user-profile";
+import { useUserProfileContext } from "@/providers/user-profile-provider";
 
 type Props = React.PropsWithChildren<{}>;
 
@@ -21,11 +21,8 @@ export default function ConversationsLayout({ children }: Props) {
     const [conversations, setConversations] = useState<Conversation[] | null>(
         null,
     );
-    const { loading, error, getChatsByMemberId } = useChatUser();
-    const { profile, fetchUserProfile } = useUserProfile();
-    useEffect(() => {
-        fetchUserProfile();
-    }, [fetchUserProfile]);
+    const { getChatsByMemberId } = useChatUser();
+    const { profile } = useUserProfileContext();
 
     useEffect(() => {
         const fetchConversations = async () => {

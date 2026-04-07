@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { chatMemberUserService } from "@/services/chat-member-user-service";
 import type {
   ChatMemberCreateUserRequest,
@@ -10,7 +10,7 @@ export const useChatMemberUser = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getChatMembersByMemberId = async (
+  const getChatMembersByMemberId = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     keywords: string = "",
@@ -42,9 +42,9 @@ export const useChatMemberUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getChatMembersByChatId = async (
+  const getChatMembersByChatId = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     chatId: string,
@@ -78,9 +78,9 @@ export const useChatMemberUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getChatMemberByChatIdAndMemberId = async (
+  const getChatMemberByChatIdAndMemberId = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     memberId: string,
@@ -102,9 +102,9 @@ export const useChatMemberUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const postChatMember = async (
+  const postChatMember = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     chatMemberCreateRequest: ChatMemberCreateUserRequest
@@ -124,9 +124,9 @@ export const useChatMemberUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const patchChatMemberRole = async (
+  const patchChatMemberRole = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     memberId: string,
@@ -150,9 +150,9 @@ export const useChatMemberUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const patchChatMemberNickname = async (
+  const patchChatMemberNickname = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     memberId: string,
@@ -176,9 +176,9 @@ export const useChatMemberUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const deleteChatMember = async (
+  const deleteChatMember = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     memberId: string,
@@ -200,7 +200,7 @@ export const useChatMemberUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   return {
     loading,
@@ -213,4 +213,4 @@ export const useChatMemberUser = () => {
     patchChatMemberNickname,
     deleteChatMember,
   };
-};
+};

@@ -1,1 +1,1 @@
-export type boolean AccountStatus;
+export type AccountStatus = boolean;

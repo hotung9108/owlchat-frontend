@@ -25,86 +25,97 @@ export default function ConversationItem({
     const { getChatMembersByChatId } = useChatMemberUser();
     const { getMessageById } = useMessageUser();
     const [displayName, setDisplayName] = useState(username);
+    const [displayAvatar, setDisplayAvatar] = useState(imageUrl);
     const [preview, setPreview] = useState("Start the conversation!");
+    const [timeStamp, setTimeStamp] = useState<string | null>(null);
     const { fetchProfileById } = useUserProfile();
     useEffect(() => {
         const loadMembers = async () => {
+            if (!id || !currentUserId) return;
             try {
-                const members = await getChatMembersByChatId(null, null, id);
-                if (
-                    Array.isArray(members) &&
-                    members.length === 2 &&
-                    currentUserId
-                ) {
+                const membersResp = await getChatMembersByChatId(null, null, id);
+                const members = membersResp.content || membersResp; // Handle page object
+
+                if (Array.isArray(members)) {
+                    // Find the member who is NOT me
                     const other = members.find((m: any) => {
-                        const memberId = m.memberId ?? m.userId ?? m.id;
-                        return memberId !== currentUserId;
+                        const mId = m.memberId ?? m.userId ?? m.id;
+                        return mId && mId !== currentUserId;
                     });
-                    const otherId =
-                        other?.memberId ?? other?.userId ?? other?.id;
-                    if (otherId) {
+
+                    if (other) {
+                        const otherId = other.memberId ?? other.userId ?? other.id;
                         const otherProfile = await fetchProfileById(otherId);
-                        const otherName =
-                            otherProfile?.name ??
-                            // otherProfile?.displayName ??
-                            // otherProfile?.username ??
-                            otherId;
-                        setDisplayName(otherName);
+                        if (otherProfile?.name) {
+                            setDisplayName(otherProfile.name);
+                        }
+                        if (otherProfile?.avatar || other.memberAvatar) {
+                            setDisplayAvatar(otherProfile?.avatar || other.memberAvatar);
+                        }
                     }
                 }
-            } catch {
-                // ignore
+            } catch (err) {
+                console.error("Error loading chat members for preview:", err);
             }
         };
 
         loadMembers();
-    }, []);
+    }, [id, currentUserId, getChatMembersByChatId, fetchProfileById]);
 
     useEffect(() => {
         const loadNewestMessage = async () => {
-            if (!newestMessageId) return;
+            if (!newestMessageId) {
+                setPreview("No messages yet");
+                setTimeStamp(null);
+                return;
+            }
             try {
                 const msg = await getMessageById(null, null, newestMessageId);
                 if (!msg) return;
 
-                if (msg?.senderId === currentUserId) {
-                    if (msg?.content) setPreview(`You: ${msg.content}`);
-                    return;
+                let content = msg.content || "";
+                if (msg.type === "IMG") content = "Đã gửi một ảnh";
+                else if (msg.type === "VID") content = "Đã gửi một video";
+                else if (msg.type === "GENERIC_FILE") content = "Đã gửi một tệp đính kèm";
+
+                if (msg.senderId === currentUserId) {
+                    setPreview(`You: ${content}`);
+                } else {
+                    setPreview(content);
                 }
 
-                const senderProfile = await fetchProfileById(msg.senderId);
-                const senderName =
-                    senderProfile?.name ??
-                    // senderProfile?.displayName ??
-                    // senderProfile?.username ??
-                    msg.senderId;
-
-                if (msg?.type === "IMG") {
-                    setPreview(`${senderName}: Đã gửi một ảnh`);
-                } else if (msg?.content) {
-                    setPreview(`${senderName}: ${msg.content}`);
+                if (msg.sentDate) {
+                    const date = new Date(msg.sentDate);
+                    setTimeStamp(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
                 }
-            } catch {
-                // ignore
+            } catch (err) {
+                console.error("Error loading newest message preview:", err);
             }
         };
 
         loadNewestMessage();
-    }, []);
+    }, [newestMessageId, currentUserId, getMessageById]);
 
     return (
         <Link to={`/conversations/${id}`} className="w-full">
             <Card className="p-2 flex flex-row items-center gap-4 truncate w-[95%] mx-auto transition-[color,box-shadow] hover:shadow-md hover:ring-1 hover:ring-ring/50">
-                <div className="flex flex-row items-center gap-4 truncate">
+                <div className="flex flex-row items-center gap-4 truncate w-full">
                     <Avatar>
-                        <AvatarImage src={imageUrl} />
+                        <AvatarImage src={displayAvatar} />
                         <AvatarFallback>
                             <User />
                         </AvatarFallback>
                     </Avatar>
-                    <div className="flex flex-col truncate">
-                        <h4 className="truncate">{displayName}</h4>
-                        <p className="text-sm text-muted-foreground tuncate">
+                    <div className="flex flex-col truncate flex-1">
+                        <div className="flex flex-row justify-between items-center w-full">
+                            <h4 className="truncate font-semibold">{displayName}</h4>
+                            {timeStamp && (
+                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                    {timeStamp}
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
                             {preview}
                         </p>
                     </div>

@@ -1,7 +1,15 @@
 import { useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Icons } from "@/utils/constants"; // Import các icon từ constants.tsx
+import { Plus, Image as ImageIcon, Video as VideoIcon, FileText, Mic, SendHorizonal } from "lucide-react";
 import type { MessageType } from "@/types/enum/mesage-type";
+import { Button } from "@/components/ui/button";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 type ChatInputProps = {
     onSendMessage: (message: string) => void;
     onSendFile: (file: File, type: MessageType) => void;
@@ -12,7 +20,7 @@ export default function ChatInput({
     onSendFile,
 }: ChatInputProps) {
     const [message, setMessage] = useState("");
-    const [showMoreOptions, setShowMoreOptions] = useState(false); // Trạng thái hiển thị thêm nút
+    const [showMoreOptions, setShowMoreOptions] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const detectFileType = (file: File): MessageType => {
@@ -20,6 +28,7 @@ export default function ChatInput({
         if (file.type.startsWith("video/")) return "VID";
         return "GENERIC_FILE";
     };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
@@ -29,6 +38,17 @@ export default function ChatInput({
 
         onSendFile(file, type);
         e.target.value = "";
+        setShowMoreOptions(false);
+    };
+
+    const triggerUpload = (type: MessageType) => {
+        if (fileInputRef.current) {
+            if (type === "IMG") fileInputRef.current.accept = "image/*";
+            else if (type === "VID") fileInputRef.current.accept = "video/*";
+            else fileInputRef.current.accept = ".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt";
+            
+            fileInputRef.current.click();
+        }
     };
 
     const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -48,12 +68,14 @@ export default function ChatInput({
             }
         }
     };
+
     const handleSend = () => {
         if (message.trim() !== "") {
             onSendMessage(message);
             setMessage("");
         }
     };
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -62,66 +84,100 @@ export default function ChatInput({
     };
 
     return (
-        <Card className="w-full p-2 rounded-lg relative bg-muted">
-            <div className="flex gap-2 items-center w-full">
-                <div className="flex items-center">
-                    <div className="relative">
-                        <button
-                            className="p-2 rounded-full hover:bg-secondary"
-                            onClick={() => setShowMoreOptions(!showMoreOptions)}
-                        >
-                            <Icons.MoreHorizontal />
-                        </button>
-                        {showMoreOptions && (
-                            <div className="absolute right-0 bottom-full mb-2 bg-card border border-border rounded-lg shadow-lg p-2 flex flex-col gap-2">
-                                {/* Icon Microphone */}
-                                <button className="p-2 rounded-full hover:bg-secondary flex items-center gap-2">
-                                    <Icons.Microphone />
-                                    <span className="text-sm text-card-foreground">
-                                        Mic
-                                    </span>
-                                </button>
-                                <button className="p-2 rounded-full hover:bg-secondary flex items-center gap-2">
-                                    <Icons.Chat />
-                                    <span className="text-sm text-card-foreground">
-                                        Note
-                                    </span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                    <button
-                        className="p-2 rounded-full hover:bg-secondary"
-                        onClick={() => fileInputRef.current?.click()}
-                    >
-                        <Icons.Attachment />
-                    </button>
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileChange}
-                    />
-                    {/* <button className="p-2 rounded-full hover:bg-secondary">
+        <TooltipProvider>
+            <Card className="w-full p-3 rounded-2xl relative bg-card/80 backdrop-blur-md border-border/40 shadow-lg">
+                <div className="flex gap-3 items-end w-full">
+                    <div className="flex items-center pb-1">
+                        <div className="relative">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={`rounded-full transition-all duration-300 ${showMoreOptions ? "bg-primary/20 text-primary rotate-45" : "hover:bg-secondary text-muted-foreground"}`}
+                                        onClick={() => setShowMoreOptions(!showMoreOptions)}
+                                    >
+                                        <Plus className="w-6 h-6" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">More options</TooltipContent>
+                            </Tooltip>
+
+                            {showMoreOptions && (
+                                <div className="absolute left-0 bottom-full mb-4 bg-card/95 border border-border/60 rounded-2xl shadow-2xl p-2 flex flex-col gap-1 min-w-[170px] animate-in fade-in slide-in-from-bottom-4 duration-300 backdrop-blur-xl z-50">
+                                    <button 
+                                        onClick={() => triggerUpload("IMG")}
+                                        className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium"
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-500">
+                                            <ImageIcon className="w-5 h-5" />
+                                        </div>
+                                        <span>Images</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => triggerUpload("VID")}
+                                        className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium"
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-500">
+                                            <VideoIcon className="w-5 h-5" />
+                                        </div>
+                                        <span>Videos</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => triggerUpload("GENERIC_FILE")}
+                                        className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium"
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-500">
+                                            <FileText className="w-5 h-5" />
+                                        </div>
+                                        <span>Documents</span>
+                                    </button>
+                                    <div className="h-px bg-border/40 my-1 mx-2" />
+                                    <button className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium">
+                                        <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-500">
+                                            <Mic className="w-5 h-5" />
+                                        </div>
+                                        <span>Audio Voice</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         
-                    </button> */}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            className="hidden"
+                            onChange={handleFileChange}
+                        />
+                    </div>
+                    
+                    <div className="flex-1 min-h-[44px] relative group">
+                        <textarea
+                            className="w-full max-h-[200px] border-none focus:ring-0 rounded-xl p-3 bg-muted/30 text-card-foreground resize-none scrollbar-hide text-sm leading-relaxed transition-all placeholder:text-muted-foreground/60"
+                            rows={1}
+                            placeholder="Type a message..."
+                            value={message}
+                            onChange={(e) => {
+                                setMessage(e.target.value);
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                            }}
+                            onKeyDown={handleKeyDown}
+                            onPaste={handlePaste}
+                        />
+                    </div>
+
+                    <div className="pb-1">
+                        <Button
+                            disabled={!message.trim()}
+                            className={`rounded-xl h-11 w-11 p-0 transition-all duration-300 shadow-md active:scale-95 ${message.trim() ? "bg-primary hover:bg-primary/90 opacity-100 scale-100" : "bg-muted text-muted-foreground opacity-50 scale-90"}`}
+                            onClick={handleSend}
+                        >
+                            <SendHorizonal className="w-6 h-6" />
+                        </Button>
+                    </div>
                 </div>
-                <textarea
-                    className="flex-1 border border-border rounded-lg p-2 bg-card text-card-foreground"
-                    rows={1}
-                    placeholder="Type a message..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    onPaste={handlePaste}
-                />
-                <button
-                    className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-secondary hover:text-secondary-foreground"
-                    onClick={handleSend}
-                >
-                    Send
-                </button>
-            </div>
-        </Card>
+            </Card>
+        </TooltipProvider>
     );
 }
