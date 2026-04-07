@@ -12,7 +12,7 @@ export interface LoginResponse {
 }
 
 export interface RefreshRequest {
-    accessToken: string;
+    refreshToken: string;
 }
 export interface RefreshResponse {
     accessToken: string;

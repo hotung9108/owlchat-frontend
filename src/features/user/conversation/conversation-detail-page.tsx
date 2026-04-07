@@ -5,76 +5,121 @@ import ConversationsLayout from "./conversations-layout";
 import ChatHeader from "../chat/components/chat-header";
 import ChatBody from "../chat/components/chat-body";
 import ChatInput from "../chat/components/chat-input";
-import { useState } from "react";
-
-// Mock data
-const mockConversations = [
-    {
-        id: "1",
-        imageUrl: "/images/user1.jpg",
-        username: "John Doe",
-        messages: [
-            { id: "1", text: "Hello!", sender: "John Doe" },
-            { id: "2", text: "Hi, how are you?", sender: "You" },
-            { id: "3", text: "I'm good, thanks!", sender: "John Doe" },
-        ],
-    },
-    {
-        id: "2",
-        imageUrl: "/images/user2.jpg",
-        username: "Jane Smith",
-        messages: [
-            { id: "1", text: "Hey there!", sender: "Jane Smith" },
-            { id: "2", text: "Hi Jane, how's it going?", sender: "You" },
-            { id: "3", text: "All good! What about you?", sender: "Jane Smith" },
-        ],
-    },
-    {
-        id: "3",
-        imageUrl: "/images/user3.jpg",
-        username: "Alice Johnson",
-        messages: [
-            { id: "1", text: "Good morning!", sender: "Alice Johnson" },
-            { id: "2", text: "Morning! How are you?", sender: "You" },
-            { id: "3", text: "I'm doing great, thanks for asking!", sender: "Alice Johnson" },
-        ],
-    },
-];
+import { useEffect, useRef, useState } from "react";
+import { useMessageUser } from "@/hooks/use-chat-message-user";
+import { useUserProfile } from "@/hooks/use-user-profile";
+import type { MessageType } from "@/types/enum/mesage-type";
 
 export default function ConversationDetailPage() {
-    const { conversationId } = useParams(); 
-    const conversation = mockConversations.find(
-        (conv) => conv.id === conversationId
-    );
-    const [messages, setMessages] = useState(conversation?.messages || []);
+    const chatBodyRef = useRef<HTMLDivElement>(null);
+    const [page, setPage] = useState(0); // Quản lý số trang hiện tại
+    const [hasMore, setHasMore] = useState(true);
+    const { conversationId } = useParams();
+    const {
+        messages,
+        loading,
+        error,
+        getMessagesByChatId,
+        postNewTextMessage,
+        postNewFileMessage,
+    } = useMessageUser();
+    const {
+        profile,
+        fetchUserProfile,
+        loading: profileLoading,
+    } = useUserProfile();
 
-    const handleSendMessage = (message: string) => {
-        const newMessage = {
-            id: (messages.length + 1).toString(),
-            text: message,
-            sender: "You",
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                await fetchUserProfile(null);
+            } catch (error) {
+                console.error("Error fetching user profile:", error);
+            }
         };
-        setMessages([newMessage, ...messages]); 
+
+        fetchProfile();
+    }, [fetchUserProfile]);
+
+    useEffect(() => {
+        if (conversationId) {
+            const fetchMessages = async () => {
+                try {
+                    const newMessages = await getMessagesByChatId(
+                        null,
+                        null,
+                        conversationId,
+                        "",
+                        page,
+                        15,
+                    );
+                    if (newMessages.length < 15) {
+                        setHasMore(false);
+                    }
+                } catch (error) {
+                    console.error("Error fetching messages:", error);
+                }
+            };
+
+            fetchMessages();
+        }
+    }, [conversationId, getMessagesByChatId, page]);
+    const handleSendMessage = async (message: string) => {
+        try {
+            await postNewTextMessage(null, null, {
+                chatId: conversationId!,
+                content: message,
+            });
+        } catch (err) {
+            console.error("Failed to send message:", err);
+        }
+    };
+    const handleSendFile = async (file: File, type: MessageType) => {
+        try {
+            await postNewFileMessage(null, null, conversationId!, type, file);
+        } catch (err) {
+            console.error("Failed to send file:", err);
+        }
     };
 
+    // if (loading) {
+    //     return (
+    //         <div className="w-full h-full flex items-center justify-center">
+    //             <LoadingLogo />
+    //         </div>
+    //     );
+    // }
+    const handleScroll = async (isAtTop: boolean) => {
+        if (isAtTop && hasMore && !loading) {
+            console.log("Loading more messages...");
+            setPage((prevPage) => {
+                console.log("Current page:", prevPage);
+                return prevPage + 1;
+            });
+        }
+    };
     return (
         <ConversationsLayout>
-            {conversation === undefined ? (
+            {messages.length === 0 ? (
                 <div className="w-full h-full flex items-center justify-center">
-                    <LoadingLogo/>
-                </div>
-            ) : conversation === null ? (
-                <div className="w-full h-full flex items-center justify-center">
-                    <p>Conversation not found</p>
+                    <p>No messages found</p>
                 </div>
             ) : (
                 <ConversationContainer>
                     <ChatHeader
-                        imageUrl={conversation.imageUrl}
-                        name={conversation.username}
+                        imageUrl="/images/default-avatar.jpg"
+                        name={profile?.name || `Conversation ${conversationId}`}
                     />
-                    <ChatBody messages={messages} />
-                    <ChatInput onSendMessage={handleSendMessage} />
+                    <ChatBody
+                        ref={chatBodyRef}
+                        messages={messages}
+                        currentUserId={profile?.id}
+                        onScroll={handleScroll} // Truyền hàm xử lý sự kiện cuộn
+                    />
+                    <ChatInput
+                        onSendMessage={handleSendMessage}
+                        onSendFile={handleSendFile}
+                    />
                 </ConversationContainer>
             )}
         </ConversationsLayout>

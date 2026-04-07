@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { friendUserService } from "../services/friend-service";
+import { friendUserService } from "@/services/friend-service";
 import type {
   FriendRequest,
   FriendRequestCreateUserRequest,
@@ -38,7 +38,8 @@ export const useFriend = () => {
 
   const getFriendRequests = useCallback(
     async (
-      requesterId: string,
+      accountId: string | null = null,
+      requesterId: string | null = null,
       page = 0,
       size = 10,
       ascSort = true,
@@ -51,6 +52,7 @@ export const useFriend = () => {
     ): Promise<FriendRequest[]> =>
       wrap(() =>
         friendUserService.getFriendRequests(
+          accountId,
           requesterId,
           page,
           size,
@@ -67,14 +69,15 @@ export const useFriend = () => {
   );
 
   const getFriendRequestById = useCallback(
-    async (requesterId: string, id: string): Promise<FriendRequest> =>
-      wrap(() => friendUserService.getFriendRequestById(requesterId, id)),
+    async (accountId: string | null = null, requesterId: string | null = null, id: string): Promise<FriendRequest> =>
+      wrap(() => friendUserService.getFriendRequestById(accountId, requesterId, id)),
     [wrap]
   );
 
   const getSendFriendRequests = useCallback(
     async (
-      requesterId: string,
+      accountId: string | null = null,
+      requesterId: string | null = null,
       page = 0,
       size = 10,
       ascSort = true,
@@ -87,6 +90,7 @@ export const useFriend = () => {
     ): Promise<FriendRequest[]> =>
       wrap(() =>
         friendUserService.getSendFriendRequests(
+          accountId,
           requesterId,
           page,
           size,
@@ -104,7 +108,8 @@ export const useFriend = () => {
 
   const getReceiveFriendRequests = useCallback(
     async (
-      requesterId: string,
+      accountId: string | null = null,
+      requesterId: string | null = null,
       page = 0,
       size = 10,
       ascSort = true,
@@ -117,6 +122,7 @@ export const useFriend = () => {
     ): Promise<FriendRequest[]> =>
       wrap(() =>
         friendUserService.getReceiveFriendRequests(
+          accountId,
           requesterId,
           page,
           size,
@@ -134,7 +140,8 @@ export const useFriend = () => {
 
   const getFriendRequestsWithUser = useCallback(
     async (
-      requesterId: string,
+      accountId: string | null = null,
+      requesterId: string | null = null,
       userId: string,
       page = 0,
       size = 10,
@@ -148,6 +155,7 @@ export const useFriend = () => {
     ): Promise<FriendRequest[]> =>
       wrap(() =>
         friendUserService.getFriendRequestsWithUser(
+          accountId,
           requesterId,
           userId,
           page,
@@ -165,9 +173,10 @@ export const useFriend = () => {
   );
 
   const getFriendRequestFromRequesterToUser = useCallback(
-    async (requesterId: string, receiverId: string): Promise<FriendRequest> =>
+    async (accountId: string | null = null, requesterId: string | null = null, receiverId: string): Promise<FriendRequest> =>
       wrap(() =>
         friendUserService.getFriendRequestFromRequesterToUser(
+          accountId,
           requesterId,
           receiverId
         )
@@ -176,9 +185,10 @@ export const useFriend = () => {
   );
 
   const getFriendRequestFromUserToRequester = useCallback(
-    async (requesterId: string, senderId: string): Promise<FriendRequest> =>
+    async (accountId: string | null = null, requesterId: string | null = null, senderId: string): Promise<FriendRequest> =>
       wrap(() =>
         friendUserService.getFriendRequestFromUserToRequester(
+          accountId,
           requesterId,
           senderId
         )
@@ -188,28 +198,37 @@ export const useFriend = () => {
 
   const postFriendRequest = useCallback(
     async (
-      requesterId: string,
+      accountId: string | null = null,
+      requesterId: string | null = null,
       request: FriendRequestCreateUserRequest
     ): Promise<FriendRequest> =>
-      wrap(() => friendUserService.postFriendRequest(requesterId, request)),
+      wrap(() =>
+        friendUserService.postFriendRequest(accountId, requesterId, request)
+      ),
     [wrap]
   );
 
   const patchFriendRequestStatus = useCallback(
     async (
-      requesterId: string,
+      accountId: string | null = null,
+      requesterId: string | null = null,
       id: string,
       request: FriendRequestResponseRequest
     ): Promise<FriendRequest> =>
       wrap(() =>
-        friendUserService.patchFriendRequestStatus(requesterId, id, request)
+        friendUserService.patchFriendRequestStatus(
+          accountId,
+          requesterId,
+          id,
+          request
+        )
       ),
     [wrap]
   );
 
   const deleteFriendRequest = useCallback(
-    async (requesterId: string, id: string): Promise<void> =>
-      wrap(() => friendUserService.deleteFriendRequest(requesterId, id)),
+    async (accountId: string | null = null, requesterId: string | null = null, id: string): Promise<void> =>
+      wrap(() => friendUserService.deleteFriendRequest(accountId, requesterId, id)),
     [wrap]
   );
 

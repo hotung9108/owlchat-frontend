@@ -11,7 +11,7 @@ import owlLogo512 from "@/assets/owl-logo/black/owl-512.png";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useAuth } from "../hooks/use-auth";
+import { useAuth } from "../../../hooks/use-auth";
 import { CheckCircle2Icon, AlertCircleIcon } from "lucide-react";
 import { CustomAlert } from "@/components/shared/alert/custom-alert";
 
@@ -38,7 +38,7 @@ export function LoginForm({
             setTimeout(() => {
                 setShowAlert(false);
                 navigate("/conversations");
-            }, 1000);
+            }, 2000);
         } catch (error: any) {
             const errorMessage =
                 error.response?.data?.message ||
@@ -48,7 +48,7 @@ export function LoginForm({
             setShowAlert(true);
             setTimeout(() => {
                 setShowAlert(false);
-            }, 1000);
+            }, 2000);
         }
     };
     return (

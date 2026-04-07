@@ -6,6 +6,7 @@ import path from "path"
 export default defineConfig({
     plugins: [
       tailwindcss(),
+      
       react({
         babel: {
           plugins: [['babel-plugin-react-compiler']],
@@ -18,6 +19,7 @@ export default defineConfig({
       },
     },
     define: {
+      global:{},
     "process.env": {
       VITE_API_BASE_URL: process.env.VITE_API_BASE_URL,
       VITE_WS_BASE_URL: process.env.VITE_WS_BASE_URL,

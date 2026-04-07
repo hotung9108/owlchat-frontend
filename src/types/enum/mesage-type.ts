@@ -1,0 +1,1 @@
+export type MessageType = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE";

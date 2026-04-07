@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance } from "axios";
 // import { API_ENDPOINTS } from "@/config/api";
 import { API_BASE_URL } from "@/config/api";
+import { refreshToken } from "@/services/account-service";
 const baseURL = API_BASE_URL;
 const apiClient: AxiosInstance = axios.create({
     baseURL,
@@ -9,6 +10,7 @@ const apiClient: AxiosInstance = axios.create({
     },
     withCredentials: true,
 });
+
 apiClient.interceptors.request.use((config) => {
     try {
         const urlPath = (config.url || "").toString();
@@ -59,8 +61,18 @@ apiClient.interceptors.response.use(
                 // Try to refresh the token
                 // const { authService } = await import('@/services/auth-service');
                 // await authService.refreshToken();
-
+                console.log("Access token expired. Attempting to refresh token...");
+                const refreshTokenValue = localStorage.getItem("refreshToken");
+                if (!refreshTokenValue)
+                    throw new Error("No refresh token found");
+                const response = await refreshToken({
+                    refreshToken: refreshTokenValue,
+                });
+                localStorage.setItem("accessToken", response.accessToken);
+                originalRequest.headers["Authorization"] =
+                    `Bearer ${response.accessToken}`;
                 // Retry the original request
+
                 return apiClient(originalRequest);
             } catch (refreshError) {
                 // If refresh fails, redirect to login
