@@ -25,7 +25,7 @@ const AppRoutes = () => {
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-<!--             <Route path="/profile" element={<UserProfilePage />} /> -->
+{/* <!--             <Route path="/profile" element={<UserProfilePage />} /> --> */}
             
             <Route path="/admin" element={<AdminPage children={<AdminContentFallback></AdminContentFallback>} />}/>
             <Route path="/admin/users" element={<AdminPage children={<AdminContentUsers></AdminContentUsers>}></AdminPage>}/>

@@ -1,21 +1,33 @@
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, User } from "lucide-react";
 import { useUserNavigation } from "../chat/hooks/userUserNavigation";
 import { useUserConversation } from "../chat/hooks/useUserConversation";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Icons } from "@/utils/constants";
+import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 export default function MobileNav() {
     const paths = useUserNavigation();
     const { isActive } = useUserConversation();
+    const { logout } = useAuth();
+    const navigate = useNavigate();
     if (isActive) return null;
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const toggleSettings = () => {
         setIsSettingsOpen((prev) => !prev);
+    };
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            window.location.href = "/login";
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
     };
     return (
         <Card className="fixed bottom-4 w-[calc(100vw-32px)] flex items-center h-16 p-2 lg:hidden">
@@ -86,10 +98,26 @@ export default function MobileNav() {
                             >
                                 <Icons.Notification />
                             </Button>
+                            
+                            {/* My Profile */}
+                            <Button
+                                size="icon"
+                                variant="outline"
+                                aria-label="My Profile"
+                                onClick={() => {
+                                    navigate("/profile");
+                                    setIsSettingsOpen(false);
+                                }}
+                            >
+                                <User />
+                            </Button>
+
+                            {/* Logout */}
                             <Button
                                 size="icon"
                                 variant="outline"
                                 aria-label="Logout"
+                                onClick={handleLogout}
                             >
                                 <Icons.Logout/>
                             </Button>

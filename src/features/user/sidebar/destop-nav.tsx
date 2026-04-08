@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent } from "@/components/ui/tooltip";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { TooltipTrigger } from "@radix-ui/react-tooltip";
 import { useUserNavigation } from "../chat/hooks/userUserNavigation";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { useState, useEffect } from "react";
 export default function DesktopNav() {
     const paths = useUserNavigation();
     const { logout } = useAuth();
+    const navigate = useNavigate();
     // const { subscribeToTopic } = useWebSocket();
     const [notifications, setNotifications] = useState<any[]>([]);
     // useEffect(() => {
@@ -142,6 +143,9 @@ export default function DesktopNav() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate("/profile")}>
+                            My Profile
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleLogout}>
                             Logout
                         </DropdownMenuItem>
