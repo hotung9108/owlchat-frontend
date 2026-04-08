@@ -110,6 +110,21 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                 {messages.map((message) => {
                     const isMe = message.senderId === currentUserId;
                     const asset = assetCache[message.id];
+                    const isSystemMessage = message.type === "SYSTEM_MESSAGE";
+
+                    // Render system messages differently
+                    if (isSystemMessage) {
+                        return (
+                            <div
+                                key={message.id}
+                                className="flex justify-center items-center py-2"
+                            >
+                                <div className="px-4 py-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium text-center max-w-[80%]">
+                                    {message.content}
+                                </div>
+                            </div>
+                        );
+                    }
 
                     return (
                         <div

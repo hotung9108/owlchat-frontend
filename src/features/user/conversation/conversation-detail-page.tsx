@@ -107,6 +107,30 @@ export default function ConversationDetailPage() {
         }
     }, [conversationId, getMessagesByChatId]);
 
+    // Auto-refresh messages every 2 seconds to catch new messages from other users
+    useEffect(() => {
+        if (!conversationId) return;
+        
+        const interval = setInterval(async () => {
+            try {
+                const size = 20;
+                await getMessagesByChatId(
+                    null,
+                    null,
+                    conversationId,
+                    "",
+                    0,
+                    size,
+                );
+            } catch (error) {
+                // Silently handle error on auto-refresh
+                console.debug("Auto-refresh messages error:", error);
+            }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [conversationId, getMessagesByChatId]);
+
     // Reset pagination on chat change
     useEffect(() => {
         setPage(0);

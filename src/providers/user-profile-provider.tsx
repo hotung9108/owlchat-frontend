@@ -16,22 +16,31 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const { profile, loading, error, fetchUserProfile, fetchProfileById } = useUserProfileHook();
   const isInitialMount = useRef(true);
 
-  // 1. Stable refresh function
+  // 1. Stable refresh function - only call if user is authenticated
   const refreshProfile = useCallback(async () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+    if (!token) {
+      return;
+    }
     try {
       await fetchUserProfile(null);
     } catch (err) {
-      console.error("Profile Provider: Error fetching profile", err);
+      console.debug("Profile Provider: Error fetching profile", err);
     }
   }, [fetchUserProfile]);
 
-  // 2. Fetch exactly once on mount
+  // 2. Fetch on mount only if token exists (prevents infinite loops on login page)
   useEffect(() => {
     if (isInitialMount.current) {
-      refreshProfile();
       isInitialMount.current = false;
+      
+      // Only fetch if already authenticated
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+      if (token) {
+        refreshProfile();
+      }
     }
-  }, [refreshProfile]);
+  }, []); // Empty deps - run only once on mount
 
   // 3. Memoize value to prevent re-rendering consumers when provider re-renders for other reasons
   const value = useMemo(() => ({

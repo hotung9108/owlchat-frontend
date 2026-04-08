@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import { User } from "lucide-react";
+import { User, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
@@ -13,6 +13,7 @@ type Props = {
     username: string;
     newestMessageId?: string;
     currentUserId?: string;
+    isGroup?: boolean;
 };
 
 export default function ConversationItem({
@@ -21,6 +22,7 @@ export default function ConversationItem({
     username,
     newestMessageId,
     currentUserId,
+    isGroup = false,
 }: Props) {
     const { getChatMembersByChatId } = useChatMemberUser();
     const { getMessageById } = useMessageUser();
@@ -29,7 +31,16 @@ export default function ConversationItem({
     const [preview, setPreview] = useState("Start the conversation!");
     const [timeStamp, setTimeStamp] = useState<string | null>(null);
     const { fetchProfileById } = useUserProfile();
+    
     useEffect(() => {
+        // For group chats, keep the group name and avatar
+        if (isGroup) {
+            setDisplayName(username);
+            setDisplayAvatar(imageUrl);
+            return;
+        }
+
+        // For one-on-one chats, load the other member's info
         const loadMembers = async () => {
             if (!id || !currentUserId) return;
             try {
@@ -60,7 +71,7 @@ export default function ConversationItem({
         };
 
         loadMembers();
-    }, [id, currentUserId, getChatMembersByChatId, fetchProfileById]);
+    }, [id, currentUserId, isGroup, getChatMembersByChatId, fetchProfileById]);
 
     useEffect(() => {
         const loadNewestMessage = async () => {
@@ -103,12 +114,17 @@ export default function ConversationItem({
                     <Avatar>
                         <AvatarImage src={displayAvatar} />
                         <AvatarFallback>
-                            <User />
+                            {isGroup ? <Users className="size-5" /> : <User className="size-5" />}
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col truncate flex-1">
                         <div className="flex flex-row justify-between items-center w-full">
-                            <h4 className="truncate font-semibold">{displayName}</h4>
+                            <div className="flex items-center gap-2 truncate">
+                                <h4 className="truncate font-semibold">{displayName}</h4>
+                                {isGroup && (
+                                    <Users className="size-4 text-muted-foreground flex-shrink-0" />
+                                )}
+                            </div>
                             {timeStamp && (
                                 <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                                     {timeStamp}
