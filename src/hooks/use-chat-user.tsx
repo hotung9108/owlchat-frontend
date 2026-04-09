@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { chatUserService } from "@/services/chat-user-service";
 import type { ChatUserRequest } from "@/types/chat.type";
 
@@ -6,7 +6,7 @@ export const useChatUser = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getChatsByMemberId = async (
+  const getChatsByMemberId = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     keywords: string = "",
@@ -38,9 +38,9 @@ export const useChatUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getChatByChatId = async (
+  const getChatByChatId = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     chatId: string
@@ -60,9 +60,9 @@ export const useChatUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getChatAvatar = async (
+  const getChatAvatar = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     chatId: string
@@ -82,9 +82,9 @@ export const useChatUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const postChat = async (
+  const postChat = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     chatRequest: ChatUserRequest
@@ -104,9 +104,9 @@ export const useChatUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const patchChatName = async (
+  const patchChatName = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     chatId: string,
@@ -128,9 +128,9 @@ export const useChatUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const patchChatAvatar = async (
+  const patchChatAvatar = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     chatId: string,
@@ -152,9 +152,9 @@ export const useChatUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const deactivateChat = async (
+  const deactivateChat = useCallback(async (
     accountId: string | null,
     requesterId: string | null,
     chatId: string
@@ -174,7 +174,7 @@ export const useChatUser = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   return {
     loading,
@@ -187,4 +187,4 @@ export const useChatUser = () => {
     patchChatAvatar,
     deactivateChat,
   };
-};
+};

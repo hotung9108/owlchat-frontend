@@ -25,6 +25,12 @@ const AppRoutes = () => {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="profile" element={<ProfileLayout />}>
+                <Route path="/friends" element={<FriendPage />} />
+                <Route path="/" element={<Navigate to="/login" />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/profile" element={<UserProfilePage />} />
                 <Route path="/admin" element={<AdminPage children={<AdminContentFallback></AdminContentFallback>} />}/>
                 <Route path="/admin/users" element={<AdminPage children={<AdminContentUsers></AdminContentUsers>}></AdminPage>}/>
                 <Route path="/admin/user/:id" element={<AdminPage children={<AdminContentUser></AdminContentUser>}></AdminPage>}/>

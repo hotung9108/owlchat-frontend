@@ -1,7 +1,6 @@
 import apiClient from "@/lib/axios";
 import { API_ENDPOINTS } from "@/config/api";
 import type {
-  FileMessageUserRequest,
   MessageUpdateContentRequest,
   TextMessageUserRequest,
   ResourceData,

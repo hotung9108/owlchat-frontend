@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AudioWaveformIcon, User } from "lucide-react";
+import { User } from "lucide-react";
 import { useUserProfile } from "@/hooks/use-user-profile";
 
 type FriendCardProps = {
