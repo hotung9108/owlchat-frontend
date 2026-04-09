@@ -25,7 +25,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  ArrowLeft, User, Mail, Phone, Calendar, Shield, Users, UserPlus,
+  User, Mail, Phone, Calendar, Shield, Users, UserPlus,
   Ban, MessageSquare, Clock, CheckCircle2, XCircle, AlertCircle,
   Pencil, PowerOff, Power, Upload
 } from "lucide-react"
@@ -211,13 +211,13 @@ export default function AdminContentUser() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-background">
+    <div className="flex flex-col h-full w-full overflow-hidden rounded-xl border border-border bg-background">
 
       {/* ── Top bar ── */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/20 shrink-0">
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <ArrowLeft size={16} />
-        </Button>
+        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary">
+            <User size={18} className="text-primary-foreground" />
+        </div>
         <div className="flex-1">
           <h1 className="text-sm font-semibold text-foreground">User Detail</h1>
           <p className="text-xs text-muted-foreground font-mono">{id}</p>

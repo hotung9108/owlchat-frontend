@@ -17,12 +17,12 @@ export default function AdminLayout({
       bg-gradient-to-br from-primary via-secondary to-muted
     ">
       {/* Sidebar */}
-      <aside className="w-full min-h-0 lg:w-[20%] flex flex-col">
+      <aside className="min-h-0 w-[20%] flex flex-col flex-shrink-0">
         {sidebar}
       </aside>
 
       {/* Main */}
-      <main className="flex-1">
+      <main className="flex-1 w-[80%]">
         {children}
       </main>
     </div>

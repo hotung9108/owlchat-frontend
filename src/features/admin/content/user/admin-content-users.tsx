@@ -33,7 +33,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import type { DateRange } from "react-day-picker"
-import { useNavigate } from "react-router-dom"
+import { useNavigate as AppRoute } from "react-router-dom"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -116,7 +116,7 @@ export default function UsersManager() {
 
   const hasFilters = search || statusFilter !== "all" || genderFilter !== "all" || dateRange
 
-  const navigate = useNavigate();
+  const router = AppRoute();
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden rounded-xl border border-border bg-background">
@@ -243,7 +243,7 @@ export default function UsersManager() {
                   className={`border-b border-border cursor-pointer transition-colors hover:bg-accent ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}
                   onClick={() => 
                     {
-                      navigate("/admin/user/" + user.id);
+                      router("/admin/user/" + user.id);
                     }
                   }
                 >
