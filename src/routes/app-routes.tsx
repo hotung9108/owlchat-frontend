@@ -6,13 +6,13 @@ import ConversationDetailPage from "@/features/user/conversation/conversation-de
 import FriendPage from "@/features/user/friend/friend-page";
 import AdminPage from "@/features/admin/pages/admin-page";
 import AdminContentFallback from "@/features/admin/content/admin-content-fallback";
-import AdminContentChats from "@/features/admin/content/admin-content-chats";
-import AdminContentUsers from "@/features/admin/content/admin-content-users";
-import AdminContentUser from "@/features/admin/content/admin-content-user";
 
 import ProfileLayout from "@/features/user/profile/profile-layout";
 import ProfilePage from "@/features/user/profile/profile-page";
 import ProfileDetailPage from "@/features/user/profile/profile-detail-page";
+import AdminContentChats from "@/features/admin/content/chat/admin-content-chats";
+import AdminContentUser from "@/features/admin/content/user/admin-content-user";
+import AdminContentUsers from "@/features/admin/content/user/admin-content-users";
 const AppRoutes = () => {
     return (
         <Routes>
