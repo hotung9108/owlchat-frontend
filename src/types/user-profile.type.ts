@@ -1,8 +1,11 @@
 export interface Account {
   id: string;
   username: string;
-  password: string;
-
+  password?: string;
+  status?: boolean;
+  role?: string;
+  createdDate?: string;
+  updatedDate?: string;
 }
 
 export interface UserProfile {
@@ -11,7 +14,7 @@ export interface UserProfile {
   name: string;
   gender?: boolean; 
   dateOfBirth?: string; 
-  avatar?: string;
+  avatar?: string | null;
   email: string;
   phoneNumber: string;
   createdDate?: string; 

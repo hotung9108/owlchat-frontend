@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "@/features/auth/pages/login-page";
+import AdminLoginPage from "@/features/auth/pages/admin-login-page";
 import RegisterPage from "@/features/auth/pages/register-page";
 import ConversationPage from "@/features/user/conversation/conversation-page";
 import ConversationDetailPage from "@/features/user/conversation/conversation-detail-page";
@@ -26,6 +27,7 @@ const AppRoutes = () => {
             <Route path="/friends" element={<FriendPage />} />
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
 {/* <!--             <Route path="/profile" element={<UserProfilePage />} /> --> */}
             
