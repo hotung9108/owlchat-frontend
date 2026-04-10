@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
@@ -19,14 +19,31 @@ export default function FriendRequestCard({
     onAccept,
     onDecline,
 }: FriendRequestCardProps) {
-    const { profile, fetchProfileById, loading, error } = useUserProfile();
+    const { profile, fetchProfileById, fetchAvatar, loading, error } = useUserProfile();
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     
     useEffect(() => {
         fetchProfileById(friendId); // Fetch profile của bạn bè
     }, [friendId, fetchProfileById]);
+
     useEffect(() => {
-        console.log(friendId);
-    })
+        if (profile?.avatar) {
+            fetchAvatar(friendId)
+                .then(blob => {
+                    if (blob && blob.size > 0) {
+                        setAvatarUrl(URL.createObjectURL(blob));
+                    }
+                })
+                .catch(err => console.error("Error fetching avatar:", err));
+        }
+    }, [profile?.avatar, friendId, fetchAvatar]);
+
+    useEffect(() => {
+        return () => {
+            if (avatarUrl) URL.revokeObjectURL(avatarUrl);
+        };
+    }, [avatarUrl]);
+
     if (loading) {
         return <p className="text-muted text-center">Loading...</p>;
     }
@@ -40,10 +57,10 @@ export default function FriendRequestCard({
             <div className="flex items-center gap-4">
                 {/* Avatar */}
                 <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                    {profile?.avatar ? (
+                    {avatarUrl ? (
                         <img
-                            src={profile.avatar}
-                            alt={`${profile?.name}'s profile`}
+                            src={avatarUrl}
+                            alt={`${profile?.name || 'Friend'}'s profile`}
                             className="w-full h-full object-cover"
                         />
                     ) : (
@@ -62,13 +79,11 @@ export default function FriendRequestCard({
                         {profile?.email || "No email"}
                     </p>
                     <p className="text-sm text-muted-foreground italic">
-                    {profile?.name || "This user"} wants to be your friend!
-                </p>
+                        {profile?.name || "This user"} wants to be your friend!
+                    </p>
                 </div>
             </div>
 
-            {/* Message */}
-            
             {/* Actions */}
             <div className="mt-6 flex justify-between items-center">
                 {status === "PENDING" && (

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
@@ -9,12 +9,30 @@ type FriendCardProps = {
 };
 
 export default function FriendCard({ friendId }: FriendCardProps) {
-    const { profile, fetchProfileById, loading, error } = useUserProfile();
+    const { profile, fetchProfileById, fetchAvatar, loading, error } = useUserProfile();
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
     useEffect(() => {
         fetchProfileById(friendId);
-        // fetchUserProfileId(friendId); // Fetch profile of the friend using friendId
-    }, []);
+    }, [friendId, fetchProfileById]);
+
+    useEffect(() => {
+        if (profile?.avatar) {
+            fetchAvatar(friendId)
+                .then(blob => {
+                    if (blob && blob.size > 0) {
+                        setAvatarUrl(URL.createObjectURL(blob));
+                    }
+                })
+                .catch(err => console.error("Error fetching avatar:", err));
+        }
+    }, [profile?.avatar, friendId, fetchAvatar]);
+
+    useEffect(() => {
+        return () => {
+            if (avatarUrl) URL.revokeObjectURL(avatarUrl);
+        };
+    }, [avatarUrl]);
     
     if (loading) return <p>Loading...</p>;
     if (error) return <p>Error loading friend profile</p>;
@@ -22,14 +40,11 @@ export default function FriendCard({ friendId }: FriendCardProps) {
     return (
         <Card className="p-4 justify-between transition-[color,box-shadow] hover:shadow-md hover:ring-1 hover:ring-ring/50">
             <div className="flex items-center gap-4">
-                {/* <div className="w-12 h-12 rounded-full flex items-center justify-center">
-                    <AudioWaveformIcon />
-                </div> */}
                 <div className="w-16 h-16 rounded-full overflow-hidden mb-4 bg-muted">
-                    {profile?.avatar ? (
+                    {avatarUrl ? (
                         <img
-                            src={profile.avatar}
-                            alt={`${profile?.name}'s profile`}
+                            src={avatarUrl}
+                            alt={`${profile?.name || 'Friend'}'s profile`}
                             className="w-full h-full object-cover"
                         />
                     ) : (
