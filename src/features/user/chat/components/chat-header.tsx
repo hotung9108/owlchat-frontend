@@ -7,9 +7,10 @@ type ChatHeaderProps = {
     imageUrl?: string;
     name: string;
     isOnline?: boolean;
+    onToggleInfo?: () => void;
 };
 
-export default function ChatHeader({ imageUrl, name, isOnline }: ChatHeaderProps) {
+export default function ChatHeader({ imageUrl, name, isOnline, onToggleInfo }: ChatHeaderProps) {
     return (
         <div
             className="w-full flex flex-row items-center justify-between p-3 border-b bg-card/60 backdrop-blur-md sticky top-0 z-10"
@@ -38,7 +39,10 @@ export default function ChatHeader({ imageUrl, name, isOnline }: ChatHeaderProps
                 <button className="hover:text-primary transition-colors p-2 rounded-full hover:bg-primary/5">
                     <Icons.Video />
                 </button>
-                <button className="hover:text-primary transition-colors p-2 rounded-full hover:bg-primary/5">
+                <button 
+                    onClick={onToggleInfo}
+                    className="hover:text-primary transition-colors p-2 rounded-full hover:bg-primary/5 active:bg-primary/10"
+                >
                     <Info className="w-5 h-5" />
                 </button>
             </div>

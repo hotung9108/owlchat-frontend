@@ -92,14 +92,8 @@ export default function ConversationsLayout({ children }: Props) {
         fetchConversationsData();
     }, [getChatsByMemberId, getChatMembersByChatId, fetchProfileById, profile?.id]);
 
-    // Auto-refresh conversations every 3 seconds to catch new messages
-    useEffect(() => {
-        const interval = setInterval(() => {
-            fetchConversationsData();
-        }, 3000);
-
-        return () => clearInterval(interval);
-    }, [getChatsByMemberId, getChatMembersByChatId, fetchProfileById, profile?.id]);
+    // Auto-refresh conversations loop has been removed to prevent backend DDoS.
+    // Real-time updates should ideally use WebSockets instead of short-polling here.
 
     // Filter conversations based on search query
     useEffect(() => {
