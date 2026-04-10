@@ -13,6 +13,8 @@ import ProfileDetailPage from "@/features/user/profile/profile-detail-page";
 import AdminContentChats from "@/features/admin/content/chat/admin-content-chats";
 import AdminContentUser from "@/features/admin/content/user/admin-content-user";
 import AdminContentUsers from "@/features/admin/content/user/admin-content-users";
+import AdminChatDetails from "@/features/admin/content/chat/admin-content-chat";
+import AdminContentMessage from "@/features/admin/content/chat/admin-content-message";
 const AppRoutes = () => {
     return (
         <Routes>
@@ -31,6 +33,9 @@ const AppRoutes = () => {
             <Route path="/admin/users" element={<AdminPage children={<AdminContentUsers></AdminContentUsers>}></AdminPage>}/>
             <Route path="/admin/user/:id" element={<AdminPage children={<AdminContentUser></AdminContentUser>}></AdminPage>}/>
             <Route path="/admin/chats" element={<AdminPage children={<AdminContentChats></AdminContentChats>}></AdminPage>}/>
+            <Route path="/admin/chat/:id" element={<AdminPage children={<AdminChatDetails></AdminChatDetails>}></AdminPage>}/>
+            <Route path="/admin/message/:id" element={<AdminPage children={<AdminContentMessage></AdminContentMessage>}></AdminPage>}/>
+            
             <Route path="profile" element={<ProfileLayout />}>
                 <Route index element={<ProfilePage />} />
                 <Route path=":userId" element={<ProfileDetailPage />} />

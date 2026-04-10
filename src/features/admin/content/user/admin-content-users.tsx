@@ -34,6 +34,7 @@ import {
 import { format } from "date-fns"
 import type { DateRange } from "react-day-picker"
 import { useNavigate as AppRoute } from "react-router-dom"
+import { AdminContentTopBar } from "../../components/admin-content-top-bar"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -122,25 +123,18 @@ export default function UsersManager() {
     <div className="flex flex-col h-full w-full overflow-hidden rounded-xl border border-border bg-background">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary">
-            <Users size={18} className="text-primary-foreground" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-foreground">Users Manager</h2>
-            {/* <p className="text-xs text-muted-foreground">{filtered.length} users found</p> */}
-          </div>
-        </div>
-
-        {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={resetFilters}
-            className="gap-1.5 text-xs text-primary hover:text-primary"
-          >
-            <X size={13} /> Clear filters
-          </Button>
-        )}
-      </div>
+      <AdminContentTopBar
+        icon={<Users size={18} />}
+        title="Users Manager"
+        buttons={hasFilters ? [
+          {
+            label: "Clear filters",
+            icon: <X size={13} />,
+            colorClass: "border-transparent shadow-none bg-transparent hover:bg-transparent text-primary hover:text-primary",
+            onClick: resetFilters
+          }
+        ] : []}
+      />
 
       {/* ── Filters ── */}
       <div className="flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-muted/10">

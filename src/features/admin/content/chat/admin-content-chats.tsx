@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +21,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import type { DateRange } from "react-day-picker"
+import { AdminContentTopBar } from "../../components/admin-content-top-bar"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -60,6 +62,7 @@ const PAGE_SIZE = 10
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AdminContentChats() {
+  const navigate = useNavigate()
   const [search, setSearch]                   = useState("")
   const [statusFilter, setStatus]             = useState("all")
   const [typeFilter, setType]                 = useState("all")
@@ -118,22 +121,19 @@ export default function AdminContentChats() {
     <div className="flex flex-col h-full w-full overflow-hidden rounded-xl border border-border bg-background">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary">
-            <MessageSquare size={18} className="text-primary-foreground" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-foreground">Chats Manager</h2>
-            <p className="text-xs text-muted-foreground">{filtered.length} chats found</p>
-          </div>
-        </div>
-        {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-1.5 text-xs text-primary hover:text-primary">
-            <X size={13} /> Clear filters
-          </Button>
-        )}
-      </div>
+      <AdminContentTopBar
+        icon={<MessageSquare size={18} />}
+        title="Chats Manager"
+        subtitle={`${filtered.length} chats found`}
+        buttons={hasFilters ? [
+          {
+            label: "Clear filters",
+            icon: <X size={13} />,
+            colorClass: "border-transparent shadow-none bg-transparent hover:bg-transparent text-primary hover:text-primary",
+            onClick: resetFilters
+          }
+        ] : []}
+      />
 
       {/* ── Filters ── */}
       <div className="flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-muted/10">
@@ -211,6 +211,7 @@ export default function AdminContentChats() {
               paginated.map((c, i) => (
                 <TableRow
                   key={c.id}
+                  onClick={() => navigate(`/admin/chat/${c.id}`)}
                   className={`border-b border-border hover:bg-accent transition-colors cursor-pointer ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}
                 >
                   {/* ID */}

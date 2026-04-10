@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,7 +30,7 @@ import {
   Pencil, PowerOff, Power, Upload
 } from "lucide-react"
 import { format } from "date-fns"
-
+import { AdminContentTopBar } from "../../components/admin-content-top-bar"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -151,6 +151,7 @@ function RequestStatusBadge({ status }: { status: FriendRequest["status"] }) {
 
 export default function AdminContentUser() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [user, setUser]                   = useState<UserProfile>(INITIAL_USER)
@@ -211,41 +212,33 @@ export default function AdminContentUser() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden rounded-xl border border-border bg-background">
+    <div className="flex flex-col h-full w-full overflow-hidden rounded-xl bg-background">
 
       {/* ── Top bar ── */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/20 shrink-0">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary">
-            <User size={18} className="text-primary-foreground" />
-        </div>
-        <div className="flex-1">
-          <h1 className="text-sm font-semibold text-foreground">User Detail</h1>
-          <p className="text-xs text-muted-foreground font-mono">{id}</p>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={openEdit}>
-            <Pencil size={13} />
-            Edit Profile
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className={`gap-2 text-xs ${user.status
+      <AdminContentTopBar
+        icon={<User size={18} />}
+        title="User Detail"
+        subtitle={id}
+        buttons={[
+          {
+            label: "Edit Profile",
+            icon: <Pencil size={13} />,
+            onClick: openEdit
+          },
+          {
+            label: user.status ? "Deactivate" : "Activate",
+            icon: user.status ? <PowerOff size={13} /> : <Power size={13} />,
+            colorClass: user.status
               ? "border-destructive/40 text-destructive hover:bg-destructive/10"
-              : "border-green-500/40 text-green-600 hover:bg-green-500/10 dark:text-green-400"
-            }`}
-            onClick={() => setToggleOpen(true)}
-          >
-            {user.status ? <><PowerOff size={13} /> Deactivate</> : <><Power size={13} /> Activate</>}
-          </Button>
-        </div>
-      </div>
+              : "border-green-500/40 text-green-600 hover:bg-green-500/10 dark:text-green-400",
+            onClick: () => setToggleOpen(true)
+          }
+        ]}
+      />
 
       {/* ── Scrollable body ── */}
       <div className="flex-1 overflow-auto">
-        <div className="max-w-5xl mx-auto px-6 py-6 space-y-6">
+        <div className="w-full px-6 py-6 space-y-6">
 
           {/* ── Profile Card ── */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -385,7 +378,7 @@ export default function AdminContentUser() {
                   </TableHeader>
                   <TableBody>
                     {CHATS.map((c, i) => (
-                      <TableRow key={c.id} className={`border-b border-border hover:bg-accent transition-colors ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
+                      <TableRow key={c.id} onClick={() => navigate(`/admin/chat/${c.id}`)} className={`border-b border-border hover:bg-accent transition-colors cursor-pointer ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
                         <TableCell className="px-4 py-3"><span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{c.id}</span></TableCell>
                         <TableCell className="px-4 py-3">
                           <div className="flex items-center gap-2">

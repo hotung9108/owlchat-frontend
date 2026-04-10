@@ -31,24 +31,24 @@ export const sidebarGroups: SidebarGroup[] = [
         label: "Chats",
         href: "/admin/chats",
         icon: <Icons.Chat  />,
-      },
-      {
-        label: "Users relationships",
-        href: "/admin/relationships",
-        icon: <Icons.Group />,
-      },
+      }
+      // {
+      //   label: "Users relationships",
+      //   href: "/admin/relationships",
+      //   icon: <Icons.Group />,
+      // },
     ],
   },
-  {
-    label: "Settings",
-    items: [
-      {
-        label: "Settings",
-        href: "/admin/settings",
-        icon: <Icons.Settings  />,
-      },
-    ],
-  },
+  // {
+  //   label: "Settings",
+  //   items: [
+  //     {
+  //       label: "Settings",
+  //       href: "/admin/settings",
+  //       icon: <Icons.Settings  />,
+  //     },
+  //   ],
+  // },
 ]
 
 export const userInfor: UserInfor = {
