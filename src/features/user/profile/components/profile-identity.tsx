@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Mail, Phone, Pencil, CalendarDays, Plus, Loader2, Upload } from "lucide-react";
@@ -23,6 +23,7 @@ export function ProfileIdentity({ profile }: ProfileIdentityProps) {
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editData, setEditData] = useState<UserProfileRequest>({
     name: profile?.name || "",
@@ -31,6 +32,29 @@ export function ProfileIdentity({ profile }: ProfileIdentityProps) {
     gender: profile?.gender,
     dateOfBirth: profile?.dateOfBirth,
   });
+
+  // Fetch avatar blob and convert to object URL
+  useEffect(() => {
+    let cleanupUrl: string | null = null;
+
+    if (profile?.id && profile?.avatar) {
+      userProfileService.getUserAvatar(profile.id)
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          cleanupUrl = url;
+          setAvatarUrl(url);
+        })
+        .catch(error => console.error("Failed to load avatar:", error));
+    } else {
+      setAvatarUrl(null);
+    }
+
+    return () => {
+      if (cleanupUrl) {
+        URL.revokeObjectURL(cleanupUrl);
+      }
+    };
+  }, [profile?.id, profile?.avatar]);
 
   const getInitials = () => {
     if (!profile?.name) return "U";
@@ -88,7 +112,7 @@ export function ProfileIdentity({ profile }: ProfileIdentityProps) {
         <div className="-mt-[4.5rem] relative z-20 shrink-0">
             <div className="relative inline-block group">
                 <Avatar className="h-[168px] w-[168px] rounded-full border-[6px] border-background shadow-md bg-white">
-                    <AvatarImage src={profile?.avatar} className="object-cover" />
+                    <AvatarImage src={avatarUrl || undefined} className="object-cover" />
                     <AvatarFallback className="text-2xl font-bold">{getInitials()}</AvatarFallback>
                 </Avatar>
                 {/* Status Bubble */}

@@ -37,17 +37,17 @@ apiClient.interceptors.request.use((config) => {
 // Response interceptor to handle 401 errors and JSON parsing errors
 apiClient.interceptors.response.use(
     (response) => {
-        // Check if response data is valid JSON
-        try {
-            if (response.data && typeof response.data === "string") {
+        // Only validate JSON for actual JSON responses
+        const contentType = response.headers["content-type"] || "";
+        if (contentType.includes("application/json") && response.data && typeof response.data === "string") {
+            try {
                 JSON.parse(response.data);
+            } catch (jsonError) {
+                console.error("Invalid JSON response from server:", jsonError);
+                return Promise.reject(
+                    new Error("Server returned invalid JSON response"),
+                );
             }
-        } catch (jsonError) {
-            console.error("Invalid JSON response from server:", jsonError);
-            // Return a clean error response
-            return Promise.reject(
-                new Error("Server returned invalid JSON response"),
-            );
         }
         return response;
     },
