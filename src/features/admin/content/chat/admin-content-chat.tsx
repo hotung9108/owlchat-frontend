@@ -1,5 +1,10 @@
-import { useState, useImperativeHandle, forwardRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useImperativeHandle, forwardRef, useEffect, useMemo } from "react"
+import { useNavigate, useParams } from "react-router-dom"
+import { useChatAdminService } from "@/hooks/use-chat-admin"
+import { useMemberAdminService } from "@/hooks/use-chat-member-admin"
+import { useMessageService } from "@/hooks/use-message-admin"
+import { useUserProfile } from "@/hooks/use-user-profile"
+import type { UserProfile } from "@/types/user-profile.type"
 import { Badge } from "@/components/ui/badge"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -22,7 +27,7 @@ import { AdminContentTopBar } from "../../components/admin-content-top-bar"
 type ChatType       = "PRIVATE" | "GROUP"
 type MemberRole     = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER"
 type MessageState   = "ORIGIN" | "EDITED" | "REMOVED"
-type MessageType    = "CHAT_NOTIFICATION" | "TEXT" | "IMG" | "VID" | "DOC"
+type MessageType    = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "DOC"
 
 type Chat = {
   id: string
@@ -77,35 +82,7 @@ export type ChatDetailHandle = {
 }
 
 // ── Mock Data ─────────────────────────────────────────────────────────────────
-
-const MOCK_CHAT: Chat = {
-  id: "CH002",
-  status: true,
-  type: "GROUP",
-  name: "Nhóm dự án Alpha",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=G1",
-  initiator_id: "ACC000000000007",
-  newest_message_id: "MSG205",
-  newest_message_date: "2024-11-01T18:20:00",
-  created_date: "2023-06-01T08:00:00",
-  updated_date: "2024-11-01T18:20:00",
-}
-
-const MOCK_MEMBERS: ChatMember[] = [
-  { member_id: "ACC000000000007", member_name: "Đặng Quốc Giang",  member_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7",  chat_id: "CH002", role: "OWNER",  nickname: "Giang Boss",  inviter_id: null,              inviter_name: null,             join_date: "2023-06-01T08:00:00" },
-  { member_id: "ACC000000000001", member_name: "Nguyễn Văn An",    member_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=1",  chat_id: "CH002", role: "ADMIN",  nickname: null,          inviter_id: "ACC000000000007", inviter_name: "Đặng Quốc Giang", join_date: "2023-06-01T08:05:00" },
-  { member_id: "ACC000000000002", member_name: "Trần Thị Bình",    member_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=2",  chat_id: "CH002", role: "MEMBER", nickname: "Bình dev",    inviter_id: "ACC000000000001", inviter_name: "Nguyễn Văn An",   join_date: "2023-06-02T09:00:00" },
-  { member_id: "ACC000000000009", member_name: "Ngô Thanh Hùng",   member_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=9",  chat_id: "CH002", role: "MEMBER", nickname: null,          inviter_id: "ACC000000000007", inviter_name: "Đặng Quốc Giang", join_date: "2023-06-03T10:30:00" },
-  { member_id: "ACC000000000004", member_name: "Phạm Thị Dung",    member_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=4",  chat_id: "CH002", role: "MEMBER", nickname: "Dung UI",     inviter_id: "ACC000000000002", inviter_name: "Trần Thị Bình",   join_date: "2023-06-05T14:00:00" },
-]
-
-const MOCK_MESSAGES: Message[] = [
-  { id: "MSG201", chat_id: "CH002", status: true,  state: "ORIGIN",      type: "TEXT",  content: "Chào mọi người! Bắt đầu dự án thôi nào.",            sender_id: "ACC000000000007", sender_name: "Đặng Quốc Giang", sender_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7", predecessor_id: null,     sent_date: "2023-06-01T08:10:00", removed_date: null, created_date: "2023-06-01T08:10:00" },
-  { id: "MSG202", chat_id: "CH002", status: true,  state: "ORIGIN",      type: "TEXT",  content: "Có mặt! Mình sẵn sàng rồi.",                          sender_id: "ACC000000000001", sender_name: "Nguyễn Văn An",   sender_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=1", predecessor_id: "MSG201", sent_date: "2023-06-01T08:12:00", removed_date: null, created_date: "2023-06-01T08:12:00" },
-  { id: "MSG203", chat_id: "CH002", status: true,  state: "REMOVED",      type: "IMG", content: "[Hình ảnh: mockup_v1.png]",                           sender_id: "ACC000000000002", sender_name: "Trần Thị Bình",   sender_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=2", predecessor_id: "MSG202", sent_date: "2023-06-01T09:00:00", removed_date: null, created_date: "2023-06-01T09:00:00" },
-  { id: "MSG204", chat_id: "CH002", status: false, state: "ORIGIN", type: "TEXT",  content: "[Tin nhắn đã bị xóa]",                                sender_id: "ACC000000000009", sender_name: "Ngô Thanh Hùng",  sender_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=9", predecessor_id: "MSG203", sent_date: "2023-06-02T10:15:00", removed_date: "2023-06-02T10:20:00", created_date: "2023-06-02T10:15:00" },
-  { id: "MSG205", chat_id: "CH002", status: true,  state: "ORIGIN", type: "TEXT",  content: "Deadline tuần tới mọi người nhớ chuẩn bị báo cáo nhé.", sender_id: "ACC000000000007", sender_name: "Đặng Quốc Giang", sender_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7", predecessor_id: "MSG204", sent_date: "2024-11-01T18:20:00", removed_date: null, created_date: "2024-11-01T18:20:00" },
-]
+// Removed as API hook is integrated
 
 // ── Helper sub-components ─────────────────────────────────────────────────────
 
@@ -151,20 +128,110 @@ function MessageTypeBadge({ type }: { type: MessageType }) {
     IMG: "border-purple-500/40 bg-purple-500/10 text-purple-600 dark:text-purple-400",
     DOC: "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
     VID: "border-pink-500/40 bg-pink-500/10 text-pink-600 dark:text-pink-400",
-    CHAT_NOTIFICATION: "border-cyan-500/40 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
+    SYSTEM_MESSAGE: "border-cyan-500/40 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
   }
   return <Badge variant="outline" className={`text-xs ${map[type]}`}>{type}</Badge>
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-const AdminChatDetails = forwardRef<ChatDetailHandle, { chat?: Chat; initialMembers?: ChatMember[]; initialMessages?: Message[] }>(
-  ({ chat: initialChat = MOCK_CHAT, initialMembers = MOCK_MEMBERS, initialMessages = MOCK_MESSAGES }, ref) => {
+const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
+    const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const [chat, setChat] = useState<Chat>(initialChat)
-    const [members,  setMembers]  = useState<ChatMember[]>(initialMembers)
-    const [messages, setMessages] = useState<Message[]>(initialMessages)
+    const { chatDetail, fetchChatById, updateStatus, loading } = useChatAdminService()
+    const { members: rawMembers, fetchMembersByChat, loading: membersLoading } = useMemberAdminService()
+    const { messages: rawMessages, fetchByChat, loading: messagesLoading } = useMessageService()
+    const { profiles: rawUsers, fetchProfiles } = useUserProfile()
+
+    const [chat, setChat] = useState<Chat | null>(null)
+    const [members, setMembers] = useState<ChatMember[]>([])
+    const [messages, setMessages] = useState<Message[]>([])
     const [toggleOpen, setToggleOpen] = useState(false)
+    const [activeTab, setActiveTab] = useState("members")
+    const [membersLoaded, setMembersLoaded] = useState(false)
+    const [messagesLoaded, setMessagesLoaded] = useState(false)
+
+    // Build a userId → UserProfile lookup map shared across both tabs
+    const usersById = useMemo<Record<string, UserProfile>>(() => {
+      return rawUsers.reduce((acc, u) => ({ ...acc, [u.id]: u }), {})
+    }, [rawUsers])
+
+    // Fetch chat details and all users on mount
+    useEffect(() => {
+      if (id) fetchChatById(id)
+      fetchProfiles("", 0, 1000) // load all users for lookup
+    }, [id])
+
+    // Map chat detail to local state
+    useEffect(() => {
+      if (chatDetail) {
+        const c = chatDetail.chat || chatDetail
+        setChat({
+          id: c.id,
+          status: c.status ?? true,
+          type: c.type || "PRIVATE",
+          name: c.name || "",
+          avatar: c.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.id}`,
+          initiator_id: c.initiatorId || c.initiator_id,
+          newest_message_id: c.newestMessageId || c.newest_message_id,
+          newest_message_date: c.newestMessageDate || c.newest_message_date,
+          created_date: c.createdDate || c.created_date,
+          updated_date: c.updatedDate || c.updated_date,
+        })
+      }
+    }, [chatDetail])
+
+    // Load members on mount (default tab)
+    useEffect(() => {
+      if (id && !membersLoaded) {
+        fetchMembersByChat(id).then(() => setMembersLoaded(true))
+      }
+    }, [id])
+
+    // Lazy-load messages on first visit to messages tab
+    useEffect(() => {
+      if (activeTab === "messages" && !messagesLoaded && id) {
+        fetchByChat(id).then(() => setMessagesLoaded(true))
+      }
+    }, [activeTab, messagesLoaded, id])
+
+    // Map raw members API response to local type
+    useEffect(() => {
+      if (rawMembers.length > 0) {
+        setMembers(rawMembers.map((m: any) => ({
+          member_id: m.memberId || m.member_id,
+          member_name: m.memberName || m.member_name || "Unknown",
+          member_avatar: m.memberAvatar || m.member_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.memberId || m.member_id}`,
+          chat_id: m.chatId || m.chat_id,
+          role: m.role,
+          nickname: m.nickname ?? null,
+          inviter_id: m.inviterId || m.inviter_id || null,
+          inviter_name: m.inviterName || m.inviter_name || null,
+          join_date: m.joinDate || m.join_date,
+        })))
+      }
+    }, [rawMembers])
+
+    // Map raw messages API response to local type
+    useEffect(() => {
+      if (rawMessages.length > 0) {
+        setMessages(rawMessages.map((ms: any) => ({
+          id: ms.id,
+          chat_id: ms.chatId || ms.chat_id,
+          status: ms.status ?? true,
+          state: ms.state || "ORIGIN",
+          type: ms.type || "TEXT",
+          content: ms.content || "",
+          sender_id: ms.senderId || ms.sender_id,
+          sender_name: ms.senderName || ms.sender_name || "Unknown",
+          sender_avatar: ms.senderAvatar || ms.sender_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${ms.senderId || ms.sender_id}`,
+          predecessor_id: ms.predecessorId || ms.predecessor_id || null,
+          sent_date: ms.sentDate || ms.sent_date || null,
+          removed_date: ms.removedDate || ms.removed_date || null,
+          created_date: ms.createdDate || ms.created_date,
+        })))
+      }
+    }, [rawMessages])
 
     // ── Exposed WebSocket update methods ────────────────────────────────────
     useImperativeHandle(ref, () => ({
@@ -189,6 +256,10 @@ const AdminChatDetails = forwardRef<ChatDetailHandle, { chat?: Chat; initialMemb
 
     }))
 
+    if (loading || !chat) {
+      return <div className="flex items-center justify-center h-full w-full bg-background"><span className="text-muted-foreground">Loading chat details...</span></div>
+    }
+
     return (
       <div className="flex flex-col h-full w-full overflow-hidden rounded-xl bg-background">
 
@@ -204,7 +275,10 @@ const AdminChatDetails = forwardRef<ChatDetailHandle, { chat?: Chat; initialMemb
             colorClass: chat.status
               ? "border-destructive/40 text-destructive hover:bg-destructive/10"
               : "border-green-500/40 text-green-600 hover:bg-green-500/10 dark:text-green-400",
-            onClick: () => setChat(prev => ({ ...prev, status: !prev.status }))
+            onClick: () => {
+              updateStatus(chat.id, !chat.status);
+              setChat(prev => prev ? ({ ...prev, status: !prev.status }) : null)
+            }
           }
         ]}
         />
@@ -250,17 +324,17 @@ const AdminChatDetails = forwardRef<ChatDetailHandle, { chat?: Chat; initialMemb
         </div>
 
         {/* ── Tabs ── */}
-        <Tabs defaultValue="members" className="flex flex-col flex-1 min-h-0 px-6 py-4 gap-3">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0 px-6 py-4 gap-3">
           <TabsList className="w-full justify-start bg-muted/40 border border-border shrink-0">
             <TabsTrigger value="members" className="gap-2 text-xs">
               <Users size={13} />
               Members
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{members.length}</span>
+              {membersLoaded && <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{members.length}</span>}
             </TabsTrigger>
             <TabsTrigger value="messages" className="gap-2 text-xs">
               <MessageSquare size={13} />
               Messages
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{messages.length}</span>
+              {messagesLoaded && <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{messages.length}</span>}
             </TabsTrigger>
           </TabsList>
 
@@ -276,21 +350,31 @@ const AdminChatDetails = forwardRef<ChatDetailHandle, { chat?: Chat; initialMemb
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {members.length === 0 ? (
+                  {membersLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-16 text-sm text-muted-foreground">Loading members...</TableCell>
+                    </TableRow>
+                  ) : members.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-16 text-sm text-muted-foreground">No members</TableCell>
                     </TableRow>
-                  ) : members.map((m, i) => (
+                  ) : members.map((m, i) => {
+                    const userProfile = usersById[m.member_id]
+                    const displayName   = userProfile?.name    || m.member_name
+                    const displayAvatar = userProfile?.avatar  || m.member_avatar
+                    const inviterProfile = m.inviter_id ? usersById[m.inviter_id] : null
+                    const inviterName   = inviterProfile?.name  || m.inviter_name
+                    return (
                     <TableRow key={m.member_id} onClick={() => navigate(`/admin/user/${m.member_id}`)} className={`border-b border-border hover:bg-accent transition-colors cursor-pointer ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
                       {/* Member */}
                       <TableCell className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <Avatar className="w-7 h-7 border border-border shrink-0">
-                            <AvatarImage src={m.member_avatar} />
-                            <AvatarFallback className="text-xs bg-muted">{m.member_name[0]}</AvatarFallback>
+                            <AvatarImage src={displayAvatar} />
+                            <AvatarFallback className="text-xs bg-muted">{displayName?.[0] ?? '?'}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="text-xs font-medium text-foreground whitespace-nowrap">{m.member_name}</p>
+                            <p className="text-xs font-medium text-foreground whitespace-nowrap">{displayName}</p>
                             <p className="text-xs text-muted-foreground font-mono">{m.member_id}</p>
                           </div>
                         </div>
@@ -305,17 +389,18 @@ const AdminChatDetails = forwardRef<ChatDetailHandle, { chat?: Chat; initialMemb
                       <TableCell className="px-4 py-3">
                         {m.inviter_id ? (
                           <div>
-                            <p className="text-xs font-medium text-foreground whitespace-nowrap">{m.inviter_name}</p>
+                            <p className="text-xs font-medium text-foreground whitespace-nowrap">{inviterName}</p>
                             <p className="text-xs text-muted-foreground font-mono">{m.inviter_id}</p>
                           </div>
                         ) : <span className="text-xs text-muted-foreground/40">—</span>}
                       </TableCell>
                       {/* Join date */}
                       <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {format(new Date(m.join_date), "dd MMM yyyy, HH:mm")}
+                        {m.join_date ? format(new Date(m.join_date), "dd MMM yyyy, HH:mm") : "—"}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -333,11 +418,19 @@ const AdminChatDetails = forwardRef<ChatDetailHandle, { chat?: Chat; initialMemb
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {messages.length === 0 ? (
+                  {messagesLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-16 text-sm text-muted-foreground">Loading messages...</TableCell>
+                    </TableRow>
+                  ) : messages.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-16 text-sm text-muted-foreground">No messages</TableCell>
                     </TableRow>
-                  ) : messages.map((msg, i) => (
+                  ) : messages.map((msg, i) => {
+                    const senderProfile = usersById[msg.sender_id]
+                    const senderName   = senderProfile?.name   || msg.sender_name
+                    const senderAvatar = senderProfile?.avatar || msg.sender_avatar
+                    return (
                     <TableRow key={msg.id} onClick={() => navigate(`/admin/message/${msg.id}`)} className={`border-b border-border hover:bg-accent transition-colors cursor-pointer ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
                       {/* ID */}
                       <TableCell className="px-4 py-3">
@@ -347,12 +440,13 @@ const AdminChatDetails = forwardRef<ChatDetailHandle, { chat?: Chat; initialMemb
                       <TableCell className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Avatar className="w-6 h-6 border border-border shrink-0">
-                            <AvatarImage src={msg.sender_avatar} />
-                            <AvatarFallback className="text-xs bg-muted">{msg.sender_name[0]}</AvatarFallback>
+                            <AvatarImage src={senderAvatar} />
+                            <AvatarFallback className="text-xs bg-muted">{senderName[0]}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="text-xs font-medium text-foreground whitespace-nowrap">{msg.sender_name}</p>
+                            <p className="text-xs font-medium text-foreground whitespace-nowrap">{senderName}</p>
                             <p className="text-xs text-muted-foreground font-mono">{msg.sender_id}</p>
+
                           </div>
                         </div>
                       </TableCell>
@@ -393,7 +487,8 @@ const AdminChatDetails = forwardRef<ChatDetailHandle, { chat?: Chat; initialMemb
                         {format(new Date(msg.created_date), "dd MMM yyyy, HH:mm")}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
