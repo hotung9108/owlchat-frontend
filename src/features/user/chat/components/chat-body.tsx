@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
 import type { Message } from "@/types/message.type";
 import { messageUserService } from "@/services/message-user-service";
 import UserAvatar from "@/components/shared/user-avatar";
-import { FileText, Download, Film, Clock } from "lucide-react";
+import { FileText, Download, Film, Clock, MoreVertical, Pencil, Trash2, X, Check, Flag } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 type ChatBodyProps = {
     messages: Message[];
@@ -11,11 +12,15 @@ type ChatBodyProps = {
     isLoadingMore?: boolean;
     otherUserName?: string;
     otherUserImage?: string;
+    onUpdateMessage?: (id: string, newContent: string) => void;
+    onDeleteMessage?: (id: string) => void;
 };
 
 const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
-    ({ messages, currentUserId, onScroll, isLoadingMore, otherUserName, otherUserImage }, ref) => {
+    ({ messages, currentUserId, onScroll, isLoadingMore, otherUserName, otherUserImage, onUpdateMessage, onDeleteMessage }, ref) => {
         const [assetCache, setAssetCache] = useState<Record<string, { url: string; type: string }>>({});
+        const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+        const [editContent, setEditContent] = useState<string>("");
         const scrollHeightRef = useRef<number>(0);
         const lastScrollTopRef = useRef<number>(0);
         const lastMessageIdRef = useRef<string | null>(null);
@@ -129,7 +134,7 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                     return (
                         <div
                             key={message.id}
-                            className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}
+                            className={`group flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}
                         >
                             {!isMe && (
                                 <UserAvatar 
@@ -148,7 +153,42 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                 `}
                             >
                                 {message.type === "TEXT" && (
-                                    <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                                    editingMessageId === message.id ? (
+                                        <div className="flex flex-col gap-2 min-w-[200px]">
+                                            <textarea 
+                                                autoFocus
+                                                value={editContent}
+                                                onChange={(e) => setEditContent(e.target.value)}
+                                                className="w-full bg-background/50 border border-primary/20 rounded-md p-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary min-h-[60px] resize-none"
+                                            />
+                                            <div className="flex justify-end gap-2">
+                                                <button 
+                                                    onClick={() => setEditingMessageId(null)}
+                                                    className="p-1.5 rounded-full hover:bg-background/20 text-muted-foreground hover:text-foreground transition-colors"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => {
+                                                        if (editContent.trim()) {
+                                                            onUpdateMessage?.(message.id, editContent.trim());
+                                                            setEditingMessageId(null);
+                                                        }
+                                                    }}
+                                                    className="p-1.5 rounded-full hover:bg-background/20 text-green-500 hover:text-green-400 transition-colors"
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="whitespace-pre-wrap leading-relaxed">
+                                            {message.content}
+                                            {message.state === "EDITED" && (
+                                                <span className="text-[10px] opacity-50 ml-2 italic">(edited)</span>
+                                            )}
+                                        </p>
+                                    )
                                 )}
 
                                 {message.type === "IMG" && (asset ? (
@@ -209,6 +249,47 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                     {new Date(message.sentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                             </div>
+                            
+                            {!isSystemMessage && (
+                                <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity self-center mx-1">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <button className="p-1.5 text-muted-foreground hover:bg-muted/50 rounded-full outline-none focus:bg-muted/50">
+                                                <MoreVertical className="w-4 h-4" />
+                                            </button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align={isMe ? "end" : "start"} className="w-32">
+                                            {isMe ? (
+                                                <>
+                                                    {message.type === "TEXT" && (
+                                                        <DropdownMenuItem onClick={() => {
+                                                            setEditingMessageId(message.id);
+                                                            setEditContent(message.content || "");
+                                                        }}>
+                                                            <Pencil className="w-4 h-4 mr-2" /> Update
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuItem 
+                                                        onClick={() => {
+                                                            if (window.confirm("Are you sure you want to delete this message?")) {
+                                                                onDeleteMessage?.(message.id);
+                                                            }
+                                                        }} 
+                                                        className="text-red-500 focus:bg-red-50 dark:focus:bg-red-950/50 focus:text-red-600"
+                                                    >
+                                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                                    </DropdownMenuItem>
+                                                </>
+                                            ) : (
+                                                <DropdownMenuItem onClick={() => alert("Report action will be implemented soon!")}>
+                                                    <Flag className="w-4 h-4 mr-2" /> Report
+                                                </DropdownMenuItem>
+                                            )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                            )}
+
                         </div>
                     );
                 })}

@@ -4,17 +4,20 @@ import ConversationsLayout from "./conversations-layout";
 import ChatHeader from "../chat/components/chat-header";
 import ChatBody from "../chat/components/chat-body";
 import ChatInput from "../chat/components/chat-input";
+import ChatInfoSidebar from "../chat/components/chat-info-sidebar";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useMessageUser } from "@/hooks/use-chat-message-user";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useChatUser } from "@/hooks/use-chat-user";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
+import { useWebSocket } from "@/providers/websocket-provider";
 import type { MessageType } from "@/types/enum/mesage-type";
 
 export default function ConversationDetailPage() {
     const chatBodyRef = useRef<HTMLDivElement>(null);
     const [page, setPage] = useState(0); 
     const [hasMore, setHasMore] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [chatMetadata, setChatMetadata] = useState<{
         name: string;
         avatar?: string;
@@ -28,7 +31,11 @@ export default function ConversationDetailPage() {
         getMessagesByChatId,
         postNewTextMessage,
         postNewFileMessage,
+        putTextMessage,
+        softDeleteMessage,
     } = useMessageUser();
+    
+    const { subscribeToTopic, isConnected } = useWebSocket();
     
     const { profile, fetchUserProfile } = useUserProfile();
     const { getChatByChatId } = useChatUser();
@@ -107,29 +114,31 @@ export default function ConversationDetailPage() {
         }
     }, [conversationId, getMessagesByChatId]);
 
-    // Auto-refresh messages every 2 seconds to catch new messages from other users
+    // Subscribe to WebSocket for real-time messages
     useEffect(() => {
-        if (!conversationId) return;
+        if (!conversationId || !isConnected) return;
         
-        const interval = setInterval(async () => {
-            try {
-                const size = 20;
-                await getMessagesByChatId(
-                    null,
-                    null,
-                    conversationId,
-                    "",
-                    0,
-                    size,
-                );
-            } catch (error) {
-                // Silently handle error on auto-refresh
-                console.debug("Auto-refresh messages error:", error);
-            }
-        }, 2000);
+        const destination = `/topic/chat.${conversationId}`;
+        const subscription = subscribeToTopic(destination, (notification: any) => {
+            console.log("New real-time message notification:", notification);
+            // Re-fetch page 0 to instantly show new messages/edits/deletes
+            const size = 20;
+            getMessagesByChatId(
+                null,
+                null,
+                conversationId,
+                "",
+                0,
+                size,
+            ).catch((error) => console.debug("Real-time refresh messages error:", error));
+        });
 
-        return () => clearInterval(interval);
-    }, [conversationId, getMessagesByChatId]);
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
+            }
+        };
+    }, [conversationId, isConnected, subscribeToTopic, getMessagesByChatId]);
 
     // Reset pagination on chat change
     useEffect(() => {
@@ -166,29 +175,58 @@ export default function ConversationDetailPage() {
         }
     };
 
+    const handleUpdateMessage = async (messageId: string, newContent: string) => {
+        try {
+            await putTextMessage(null, null, messageId, { content: newContent });
+        } catch (err) {
+            console.error("Failed to update message:", err);
+        }
+    };
+
+    const handleDeleteMessage = async (messageId: string) => {
+        try {
+            await softDeleteMessage(null, null, messageId);
+        } catch (err) {
+            console.error("Failed to delete message:", err);
+        }
+    };
+
     return (
         <ConversationsLayout>
-            <ConversationContainer>
-                <ChatHeader
-                    imageUrl={chatMetadata.avatar}
-                    name={chatMetadata.name}
-                    isOnline={chatMetadata.isOnline}
-                />
-                <ChatBody
-                    key={conversationId}
-                    ref={chatBodyRef}
-                    messages={messages}
-                    currentUserId={profile?.id}
-                    onScroll={handleScroll}
-                    isLoadingMore={loading && page > 0}
-                    otherUserName={chatMetadata.name}
-                    otherUserImage={chatMetadata.avatar}
-                />
-                <ChatInput
-                    onSendMessage={handleSendMessage}
-                    onSendFile={handleSendFile}
-                />
-            </ConversationContainer>
+            <div className="flex w-full h-full gap-2 relative overflow-hidden">
+                <ConversationContainer>
+                    <ChatHeader
+                        imageUrl={chatMetadata.avatar}
+                        name={chatMetadata.name}
+                        isOnline={chatMetadata.isOnline}
+                        onToggleInfo={() => setIsSidebarOpen(!isSidebarOpen)}
+                    />
+                    <ChatBody
+                        key={conversationId}
+                        ref={chatBodyRef}
+                        messages={messages}
+                        currentUserId={profile?.id}
+                        onScroll={handleScroll}
+                        isLoadingMore={loading && page > 0}
+                        otherUserName={chatMetadata.name}
+                        otherUserImage={chatMetadata.avatar}
+                        onUpdateMessage={handleUpdateMessage}
+                        onDeleteMessage={handleDeleteMessage}
+                    />
+                    <ChatInput
+                        onSendMessage={handleSendMessage}
+                        onSendFile={handleSendFile}
+                    />
+                </ConversationContainer>
+                
+                {isSidebarOpen && conversationId && (
+                    <ChatInfoSidebar 
+                        conversationId={conversationId} 
+                        currentUserId={profile?.id} 
+                        onClose={() => setIsSidebarOpen(false)} 
+                    />
+                )}
+            </div>
         </ConversationsLayout>
     );
 }
