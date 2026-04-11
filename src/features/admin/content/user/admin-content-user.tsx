@@ -1,5 +1,12 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
+import { userProfileService } from "@/services/user-profile-service"
+import { chatAdminService } from "@/services/chat-admin-service"
+import { useAccountService } from "@/hooks/use-account"
+import { useFriendshipAdminService } from "@/hooks/use-friendship-admin"
+import { useFriendRequestService } from "@/hooks/use-friend-request-admin"
+import { useBlockService } from "@/hooks/use-block-admin"
+import { useUserProfile } from "@/hooks/use-user-profile"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -87,31 +94,6 @@ const INITIAL_USER: UserProfile = {
   created_date: "2023-01-15T08:30:00", updated_date: "2024-11-02T14:20:00",
 }
 
-const FRIENDS: Friendship[] = [
-  { id: "FR001", first_user_id: "ACC000000000007", first_user_name: "Đặng Quốc Giang", first_user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7",  second_user_id: "ACC000000000001", second_user_name: "Nguyễn Văn An",   second_user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=1",  created_date: "2023-03-10T10:00:00" },
-  { id: "FR002", first_user_id: "ACC000000000002", first_user_name: "Trần Thị Bình",   first_user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=2",  second_user_id: "ACC000000000007", second_user_name: "Đặng Quốc Giang", second_user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7",  created_date: "2023-05-18T15:30:00" },
-  { id: "FR003", first_user_id: "ACC000000000007", first_user_name: "Đặng Quốc Giang", first_user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7",  second_user_id: "ACC000000000009", second_user_name: "Ngô Thanh Hùng",  second_user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=9",  created_date: "2024-01-05T09:15:00" },
-]
-
-const FRIEND_REQUESTS: FriendRequest[] = [
-  { id: "RQ001", sender_id: "ACC000000000007", sender_name: "Đặng Quốc Giang", sender_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7",  receiver_id: "ACC000000000004", receiver_name: "Phạm Thị Dung",   receiver_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=4",  status: "PENDING",  created_date: "2024-11-01T09:00:00", updated_date: "2024-11-01T09:00:00" },
-  { id: "RQ002", sender_id: "ACC000000000010", sender_name: "Đinh Thị Lan",    sender_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=10", receiver_id: "ACC000000000007", receiver_name: "Đặng Quốc Giang", receiver_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7",  status: "PENDING",  created_date: "2024-10-28T14:00:00", updated_date: "2024-10-28T14:00:00" },
-  { id: "RQ003", sender_id: "ACC000000000007", sender_name: "Đặng Quốc Giang", sender_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7",  receiver_id: "ACC000000000012", receiver_name: "Lý Thị Ngọc",    receiver_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=12", status: "ACCEPTED", created_date: "2024-09-15T11:00:00", updated_date: "2024-09-16T08:30:00" },
-  { id: "RQ004", sender_id: "ACC000000000005", sender_name: "Hoàng Văn Em",    sender_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=5",  receiver_id: "ACC000000000007", receiver_name: "Đặng Quốc Giang", receiver_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7",  status: "REJECTED", created_date: "2024-08-20T16:00:00", updated_date: "2024-08-21T10:00:00" },
-]
-
-const BLOCKS: Block[] = [
-  { id: "BL001", blocker_id: "ACC000000000007", blocker_name: "Đặng Quốc Giang", blocker_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7", blocked_id: "ACC000000000003", blocked_name: "Lê Minh Cường",   blocked_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=3", created_date: "2024-06-10T12:00:00" },
-  { id: "BL002", blocker_id: "ACC000000000008", blocker_name: "Bùi Thị Hoa",     blocker_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=8", blocked_id: "ACC000000000007", blocked_name: "Đặng Quốc Giang", blocked_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7", created_date: "2024-07-22T09:30:00" },
-]
-
-const CHATS: Chat[] = [
-  { id: "CH001", status: true,  type: "PRIVATE", name: "Nguyễn Văn An",    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=1",  initiator_id: "ACC000000000007", newest_message_id: "MSG100", newest_message_date: "2024-11-02T13:45:00", created_date: "2023-03-10T10:05:00", updated_date: "2024-11-02T13:45:00" },
-  { id: "CH002", status: true,  type: "GROUP",   name: "Nhóm dự án Alpha", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=G1", initiator_id: "ACC000000000007", newest_message_id: "MSG200", newest_message_date: "2024-11-01T18:20:00", created_date: "2023-06-01T08:00:00", updated_date: "2024-11-01T18:20:00" },
-  { id: "CH003", status: false, type: "PRIVATE", name: "Trần Thị Bình",    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=2",  initiator_id: "ACC000000000002", newest_message_id: "MSG300", newest_message_date: "2024-09-30T11:10:00", created_date: "2023-05-18T15:35:00", updated_date: "2024-09-30T11:10:00" },
-  { id: "CH004", status: true,  type: "GROUP",   name: "Gia đình",          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=G2", initiator_id: "ACC000000000001", newest_message_id: "MSG400", newest_message_date: "2024-10-15T20:00:00", created_date: "2022-12-25T00:00:00", updated_date: "2024-10-15T20:00:00" },
-]
-
 // ── Helper Components ─────────────────────────────────────────────────────────
 
 function UserCell({ name, avatar, id }: { name: string; avatar: string; id: string }) {
@@ -152,10 +134,161 @@ function RequestStatusBadge({ status }: { status: FriendRequest["status"] }) {
 export default function AdminContentUser() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { updateStatus } = useAccountService()
+  {/* NEW HOOK */}
+  const { fetchProfileById } = useUserProfile()
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [user, setUser]                   = useState<UserProfile>(INITIAL_USER)
   const [activeTab, setActiveTab]         = useState("friends")
+  const [isLoading, setIsLoading]         = useState(true)
+
+  // Shared Users Cache
+  const [userCache, setUserCache] = useState<Record<string, any>>({})
+
+  const loadMissingUsers = async (ids: string[]) => {
+    const missingIds = ids.filter(userId => userId && !userCache[userId])
+    if (missingIds.length === 0) return
+
+    const uniqueMissing = Array.from(new Set(missingIds))
+    const results = await Promise.allSettled(uniqueMissing.map(userId => fetchProfileById(userId as string)))
+    
+    const newCache: Record<string, any> = {}
+    results.forEach((res, i) => {
+      if (res.status === 'fulfilled' && res.value) {
+        newCache[uniqueMissing[i]] = res.value
+      }
+    })
+    
+    if (Object.keys(newCache).length > 0) {
+      setUserCache(prev => ({ ...prev, ...newCache }))
+    }
+  }
+
+  const getCachedUser = (userId: string, fallbackName?: string, fallbackAvatar?: string) => {
+    const cached = userCache[userId]
+    return {
+      name: cached?.name || fallbackName || "Unknown",
+      avatar: cached?.avatar || fallbackAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`
+    }
+  }
+
+  const [chats, setChats]                 = useState<Chat[]>([])
+  const [chatsLoaded, setChatsLoaded]     = useState(false)
+  const [chatsLoading, setChatsLoading]   = useState(false)
+
+  const { friendships, fetchByUser: fetchFriendships, loading: friendshipsLoading } = useFriendshipAdminService()
+  const [friendshipsLoaded, setFriendshipsLoaded] = useState(false)
+
+  const { requests, fetchByUser: fetchRequests, loading: requestsLoading } = useFriendRequestService()
+  const [requestsLoaded, setRequestsLoaded] = useState(false)
+
+  const { blocks, fetchBlockedByUser, loading: blocksLoading } = useBlockService()
+  const [blocksLoaded, setBlocksLoaded] = useState(false)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!id) return;
+      try {
+        setIsLoading(true)
+        const data = await userProfileService.getProfileById(id)
+        setUser({
+            id: data.id,
+            status: data.account?.status ?? false,
+            role: (data.account?.role as any) ?? "USER",
+            name: data.name,
+            gender: data.gender ?? true,
+            date_of_birth: data.dateOfBirth ?? "",
+            avatar: data.avatar ?? "https://api.dicebear.com/7.x/avataaars/svg?seed=7",
+            email: data.email,
+            phone_number: data.phoneNumber,
+            created_date: data.createdDate ?? new Date().toISOString(),
+            updated_date: data.updatedDate ?? new Date().toISOString(),
+        })
+      } catch (err) {
+        console.error("Failed to load user profile:", err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchUser()
+  }, [id])
+
+  useEffect(() => {
+    if (activeTab === "chats" && !chatsLoaded && id) {
+      const fetchChats = async () => {
+        try {
+          setChatsLoading(true)
+          const response = await chatAdminService.getChats({ initiatorId: id })
+          const chatData = response.data?.content || response.data || []
+          setChats(chatData.map((c: any) => ({
+            id: c.id,
+            status: c.status ?? true,
+            type: c.type || "PRIVATE",
+            name: c.name || "Unknown",
+            avatar: c.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.id}`,
+            initiator_id: c.initiatorId || c.initiator_id,
+            newest_message_id: c.newestMessageId || c.newest_message_id,
+            newest_message_date: c.newestMessageDate || c.newest_message_date,
+            created_date: c.createdDate || c.created_date,
+            updated_date: c.updatedDate || c.updated_date,
+          })))
+          setChatsLoaded(true)
+        } catch (err) {
+          console.error("Failed to load user chats", err)
+        } finally {
+          setChatsLoading(false)
+        }
+      }
+      fetchChats()
+    }
+  }, [activeTab, chatsLoaded, id])
+
+  useEffect(() => {
+    if (activeTab === "friends" && !friendshipsLoaded && id) {
+      fetchFriendships(id).then(() => setFriendshipsLoaded(true))
+    }
+  }, [activeTab, friendshipsLoaded, id])
+
+  useEffect(() => {
+    if (activeTab === "requests" && !requestsLoaded && id) {
+      fetchRequests(id).then(() => setRequestsLoaded(true))
+    }
+  }, [activeTab, requestsLoaded, id])
+
+  useEffect(() => {
+    if (activeTab === "blocks" && !blocksLoaded && id) {
+      fetchBlockedByUser(id).then(() => setBlocksLoaded(true))
+    }
+  }, [activeTab, blocksLoaded, id])
+
+  useEffect(() => {
+    if (friendships.length > 0) {
+      const ids = friendships.flatMap(f => [f.firstUserId || f.first_user_id, f.secondUserId || f.second_user_id])
+      loadMissingUsers(ids)
+    }
+  }, [friendships])
+
+  useEffect(() => {
+    if (requests.length > 0) {
+      const ids = requests.flatMap(r => [r.senderId || r.sender_id, r.receiverId || r.receiver_id])
+      loadMissingUsers(ids)
+    }
+  }, [requests])
+
+  useEffect(() => {
+    if (blocks.length > 0) {
+      const ids = blocks.flatMap(b => [b.blockerId || b.blocker_id, b.blockedId || b.blocked_id])
+      loadMissingUsers(ids)
+    }
+  }, [blocks])
+
+  useEffect(() => {
+    if (chats.length > 0) {
+      const ids = chats.map(c => c.initiator_id)
+      loadMissingUsers(ids)
+    }
+  }, [chats])
 
   // Edit dialog
   const [editOpen, setEditOpen]           = useState(false)
@@ -190,27 +323,47 @@ export default function AdminContentUser() {
     setEditOpen(true)
   }
 
-  const handleSaveEdit = () => {
-    setUser(prev => ({
-      ...prev,
-      ...editForm,
-      updated_date: new Date().toISOString(),
-    }))
-    setEditOpen(false)
+  const handleSaveEdit = async () => {
+    try {
+      await userProfileService.updateProfile(user.id, {
+        name: editForm.name,
+        gender: editForm.gender,
+        dateOfBirth: editForm.date_of_birth,
+        email: editForm.email,
+        phoneNumber: editForm.phone_number,
+      })
+      setUser(prev => ({
+        ...prev,
+        ...editForm,
+        updated_date: new Date().toISOString(),
+      }))
+      setEditOpen(false)
+    } catch (err) {
+      console.error("Failed to update profile", err)
+    }
   }
 
-  const handleToggleStatus = () => {
-    setUser(prev => ({
-      ...prev,
-      status: !prev.status,
-      updated_date: new Date().toISOString(),
-    }))
-    setToggleOpen(false)
+  const handleToggleStatus = async () => {
+    try {
+      await updateStatus(user.id, !user.status)
+      setUser(prev => ({
+        ...prev,
+        status: !prev.status,
+        updated_date: new Date().toISOString(),
+      }))
+      setToggleOpen(false)
+    } catch (err) {
+      console.error("Failed to update status", err)
+    }
   }
 
   const [avatarError, setAvatarError] = useState("")
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  if (isLoading && user.id === INITIAL_USER.id) {
+    return <div className="flex items-center justify-center h-full w-full bg-background"><span className="text-muted-foreground">Loading user data...</span></div>
+  }
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden rounded-xl bg-background">
 
@@ -282,10 +435,10 @@ export default function AdminContentUser() {
           {/* ── Tabs ── */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full justify-start bg-muted/40 border border-border">
-              <TabsTrigger value="friends"  className="gap-2 text-xs"><Users size={13} /> Friends <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{FRIENDS.length}</span></TabsTrigger>
-              <TabsTrigger value="requests" className="gap-2 text-xs"><UserPlus size={13} /> Requests <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{FRIEND_REQUESTS.length}</span></TabsTrigger>
-              <TabsTrigger value="blocks"   className="gap-2 text-xs"><Ban size={13} /> Blocks <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{BLOCKS.length}</span></TabsTrigger>
-              <TabsTrigger value="chats"    className="gap-2 text-xs"><MessageSquare size={13} /> Chats <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{CHATS.length}</span></TabsTrigger>
+              <TabsTrigger value="friends"  className="gap-2 text-xs"><Users size={13} /> Friends {friendshipsLoaded && <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{friendships.length}</span>}</TabsTrigger>
+              <TabsTrigger value="requests" className="gap-2 text-xs"><UserPlus size={13} /> Requests {requestsLoaded && <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{requests.length}</span>}</TabsTrigger>
+              <TabsTrigger value="blocks"   className="gap-2 text-xs"><Ban size={13} /> Blocks {blocksLoaded && <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{blocks.length}</span>}</TabsTrigger>
+              <TabsTrigger value="chats"    className="gap-2 text-xs"><MessageSquare size={13} /> Chats {chatsLoaded && <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{chats.length}</span>}</TabsTrigger>
             </TabsList>
 
             {/* Friends */}
@@ -300,14 +453,30 @@ export default function AdminContentUser() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {FRIENDS.map((f, i) => (
-                      <TableRow key={f.id} className={`border-b border-border hover:bg-accent transition-colors ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
-                        <TableCell className="px-4 py-3"><span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{f.id}</span></TableCell>
-                        <TableCell className="px-4 py-3"><UserCell name={f.first_user_name}  avatar={f.first_user_avatar}  id={f.first_user_id} /></TableCell>
-                        <TableCell className="px-4 py-3"><UserCell name={f.second_user_name} avatar={f.second_user_avatar} id={f.second_user_id} /></TableCell>
-                        <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{format(new Date(f.created_date), "dd MMM yyyy, HH:mm")}</TableCell>
+                    {friendshipsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">Loading friends...</TableCell>
                       </TableRow>
-                    ))}
+                    ) : friendships.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">No friends found.</TableCell>
+                      </TableRow>
+                    ) : (
+                      friendships.map((f, i) => {
+                        const firstId = f.firstUserId || f.first_user_id;
+                        const secondId = f.secondUserId || f.second_user_id;
+                        const u1 = getCachedUser(firstId, f.firstUserName || f.first_user_name, f.firstUserAvatar || f.first_user_avatar);
+                        const u2 = getCachedUser(secondId, f.secondUserName || f.second_user_name, f.secondUserAvatar || f.second_user_avatar);
+                        return (
+                          <TableRow key={f.id} className={`border-b border-border hover:bg-accent transition-colors ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
+                            <TableCell className="px-4 py-3"><span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{f.id}</span></TableCell>
+                            <TableCell className="px-4 py-3"><UserCell name={u1.name} avatar={u1.avatar} id={firstId} /></TableCell>
+                            <TableCell className="px-4 py-3"><UserCell name={u2.name} avatar={u2.avatar} id={secondId} /></TableCell>
+                            <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{f.createdDate || f.created_date ? format(new Date(f.createdDate || f.created_date), "dd MMM yyyy, HH:mm") : "—"}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -325,16 +494,32 @@ export default function AdminContentUser() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {FRIEND_REQUESTS.map((r, i) => (
-                      <TableRow key={r.id} className={`border-b border-border hover:bg-accent transition-colors ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
-                        <TableCell className="px-4 py-3"><span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{r.id}</span></TableCell>
-                        <TableCell className="px-4 py-3"><UserCell name={r.sender_name}   avatar={r.sender_avatar}   id={r.sender_id} /></TableCell>
-                        <TableCell className="px-4 py-3"><UserCell name={r.receiver_name} avatar={r.receiver_avatar} id={r.receiver_id} /></TableCell>
-                        <TableCell className="px-4 py-3"><RequestStatusBadge status={r.status} /></TableCell>
-                        <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{format(new Date(r.created_date), "dd MMM yyyy, HH:mm")}</TableCell>
-                        <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{format(new Date(r.updated_date), "dd MMM yyyy, HH:mm")}</TableCell>
+                    {requestsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Loading requests...</TableCell>
                       </TableRow>
-                    ))}
+                    ) : requests.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No child requests found.</TableCell>
+                      </TableRow>
+                    ) : (
+                      requests.map((r, i) => {
+                        const senderId = r.senderId || r.sender_id;
+                        const receiverId = r.receiverId || r.receiver_id;
+                        const s = getCachedUser(senderId, r.senderName || r.sender_name, r.senderAvatar || r.sender_avatar);
+                        const rec = getCachedUser(receiverId, r.receiverName || r.receiver_name, r.receiverAvatar || r.receiver_avatar);
+                        return (
+                          <TableRow key={r.id} className={`border-b border-border hover:bg-accent transition-colors ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
+                            <TableCell className="px-4 py-3"><span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{r.id}</span></TableCell>
+                            <TableCell className="px-4 py-3"><UserCell name={s.name} avatar={s.avatar} id={senderId} /></TableCell>
+                            <TableCell className="px-4 py-3"><UserCell name={rec.name} avatar={rec.avatar} id={receiverId} /></TableCell>
+                            <TableCell className="px-4 py-3"><RequestStatusBadge status={r.status} /></TableCell>
+                            <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{r.createdDate || r.created_date ? format(new Date(r.createdDate || r.created_date), "dd MMM yyyy, HH:mm") : "—"}</TableCell>
+                            <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{r.updatedDate || r.updated_date ? format(new Date(r.updatedDate || r.updated_date), "dd MMM yyyy, HH:mm") : "—"}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -352,14 +537,30 @@ export default function AdminContentUser() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {BLOCKS.map((b, i) => (
-                      <TableRow key={b.id} className={`border-b border-border hover:bg-accent transition-colors ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
-                        <TableCell className="px-4 py-3"><span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{b.id}</span></TableCell>
-                        <TableCell className="px-4 py-3"><UserCell name={b.blocker_name} avatar={b.blocker_avatar} id={b.blocker_id} /></TableCell>
-                        <TableCell className="px-4 py-3"><UserCell name={b.blocked_name} avatar={b.blocked_avatar} id={b.blocked_id} /></TableCell>
-                        <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{format(new Date(b.created_date), "dd MMM yyyy, HH:mm")}</TableCell>
+                    {blocksLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">Loading blocks...</TableCell>
                       </TableRow>
-                    ))}
+                    ) : blocks.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">No blocks found.</TableCell>
+                      </TableRow>
+                    ) : (
+                      blocks.map((b, i) => {
+                        const blockerId = b.blockerId || b.blocker_id;
+                        const blockedId = b.blockedId || b.blocked_id;
+                        const blker = getCachedUser(blockerId, b.blockerName || b.blocker_name, b.blockerAvatar || b.blocker_avatar);
+                        const blked = getCachedUser(blockedId, b.blockedName || b.blocked_name, b.blockedAvatar || b.blocked_avatar);
+                        return (
+                          <TableRow key={b.id} className={`border-b border-border hover:bg-accent transition-colors ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
+                            <TableCell className="px-4 py-3"><span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{b.id}</span></TableCell>
+                            <TableCell className="px-4 py-3"><UserCell name={blker.name} avatar={blker.avatar} id={blockerId} /></TableCell>
+                            <TableCell className="px-4 py-3"><UserCell name={blked.name} avatar={blked.avatar} id={blockedId} /></TableCell>
+                            <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{b.createdDate || b.created_date ? format(new Date(b.createdDate || b.created_date), "dd MMM yyyy, HH:mm") : "—"}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -377,29 +578,49 @@ export default function AdminContentUser() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {CHATS.map((c, i) => (
-                      <TableRow key={c.id} onClick={() => navigate(`/admin/chat/${c.id}`)} className={`border-b border-border hover:bg-accent transition-colors cursor-pointer ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
-                        <TableCell className="px-4 py-3"><span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{c.id}</span></TableCell>
-                        <TableCell className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Avatar className="w-7 h-7 border border-border">
-                              <AvatarImage src={c.avatar} />
-                              <AvatarFallback className="text-xs bg-muted">{c.name[0]}</AvatarFallback>
-                            </Avatar>
-                            <span className="text-xs font-medium text-foreground whitespace-nowrap">{c.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-4 py-3">
-                          <Badge variant="outline" className={`text-xs ${c.type === "GROUP" ? "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400" : "border-purple-500/40 bg-purple-500/10 text-purple-600 dark:text-purple-400"}`}>{c.type}</Badge>
-                        </TableCell>
-                        <TableCell className="px-4 py-3">
-                          <Badge variant="outline" className={`text-xs ${c.status ? "border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400" : "border-destructive/40 bg-destructive/10 text-destructive"}`}>{c.status ? "Active" : "Inactive"}</Badge>
-                        </TableCell>
-                        <TableCell className="px-4 py-3"><span className="text-xs font-mono text-muted-foreground">{c.initiator_id}</span></TableCell>
-                        <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{c.newest_message_date ? format(new Date(c.newest_message_date), "dd MMM yyyy, HH:mm") : "—"}</TableCell>
-                        <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{format(new Date(c.created_date), "dd MMM yyyy, HH:mm")}</TableCell>
+                    {chatsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading chats...</TableCell>
                       </TableRow>
-                    ))}
+                    ) : chats.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No chats found.</TableCell>
+                      </TableRow>
+                    ) : (
+                      chats.map((c, i) => {
+                        const initId = c.initiator_id;
+                        const initiatorUser = initId ? getCachedUser(initId) : null;
+                        return (
+                          <TableRow key={c.id} onClick={() => navigate(`/admin/chat/${c.id}`)} className={`border-b border-border hover:bg-accent transition-colors cursor-pointer ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
+                            <TableCell className="px-4 py-3"><span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{c.id}</span></TableCell>
+                            <TableCell className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="w-7 h-7 border border-border">
+                                  <AvatarImage src={c.avatar} />
+                                  <AvatarFallback className="text-xs bg-muted">{c.name?.[0] || '?'}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs font-medium text-foreground whitespace-nowrap">{c.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <Badge variant="outline" className={`text-xs ${c.type === "GROUP" ? "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400" : "border-purple-500/40 bg-purple-500/10 text-purple-600 dark:text-purple-400"}`}>{c.type}</Badge>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <Badge variant="outline" className={`text-xs ${c.status ? "border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400" : "border-destructive/40 bg-destructive/10 text-destructive"}`}>{c.status ? "Active" : "Inactive"}</Badge>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              {initiatorUser ? (
+                                <UserCell name={initiatorUser.name} avatar={initiatorUser.avatar} id={initId} />
+                              ) : (
+                                <span className="text-xs font-mono text-muted-foreground">{initId}</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{c.newest_message_date ? format(new Date(c.newest_message_date), "dd MMM yyyy, HH:mm") : "—"}</TableCell>
+                            <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{c.created_date ? format(new Date(c.created_date), "dd MMM yyyy, HH:mm") : "—"}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </div>
