@@ -53,7 +53,13 @@ export function useMessageService() {
   };
 
   const activate = async (messageId: string) => {
-    return messageService.activate(messageId);
+    try {
+      setLoading(true);
+      const res = await messageService.activate(messageId)
+      setMessageDetail(res.data);
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* -------- FILTER -------- */

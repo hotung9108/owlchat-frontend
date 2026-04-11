@@ -1,23 +1,47 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "react-router-dom"
+import { useMessageService } from "@/hooks/use-message-admin"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  ArrowLeft, MessageSquare, Hash, User, Calendar, Clock,
+  MessageSquare, Hash, User, Calendar, Clock,
   FileText, Image, Video, Film, Bell, Power, PowerOff, Link,
 } from "lucide-react"
 import { format } from "date-fns"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
+import { useNavigate } from "react-router-dom";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type MessageType  = "CHAT_NOTIFICATION" | "TEXT" | "IMG" | "VID" | "DOC"
+type MessageType  = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "DOC"
 type MessageState = "ORIGIN" | "EDITED" | "REMOVED"
+
+function Clickable({
+  onClick,
+  children,
+  className = "",
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") onClick();
+      }}
+      className={`cursor-pointer transition ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
 
 type Message = {
   id: string
@@ -27,26 +51,12 @@ type Message = {
   type: MessageType
   content: string
   sender_id: string | null
+  sender_name: string | null
+  sender_avatar: string | null
   predecessor_id: string | null
   sent_date: string | null
   removed_date: string | null
   created_date: string
-}
-
-// ── Mock Data ─────────────────────────────────────────────────────────────────
-
-const MOCK_MESSAGE: Message = {
-  id:             "MSG000000000101",
-  chat_id:        "CH001",
-  status:         true,
-  state:          "EDITED",
-  type:           "TEXT",
-  content:        "Hey! Are we still meeting tomorrow at 10am? I wanted to confirm before I book the room. Let me know if the time still works for everyone.",
-  sender_id:      "ACC000000000001",
-  predecessor_id: "MSG000000000100",
-  sent_date:      "2024-11-02T13:45:00",
-  removed_date:   null,
-  created_date:   "2024-11-02T13:45:02",
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -54,21 +64,21 @@ const MOCK_MESSAGE: Message = {
 function typeIcon(type: MessageType) {
   const cls = "text-muted-foreground"
   switch (type) {
-    case "CHAT_NOTIFICATION": return <Bell   size={14} className={cls} />
-    case "TEXT":              return <MessageSquare size={14} className={cls} />
-    case "IMG":               return <Image  size={14} className={cls} />
-    case "VID":               return <Film   size={14} className={cls} />
-    case "DOC":               return <FileText size={14} className={cls} />
+    case "SYSTEM_MESSAGE": return <Bell      size={14} className={cls} />
+    case "TEXT":           return <MessageSquare size={14} className={cls} />
+    case "IMG":            return <Image     size={14} className={cls} />
+    case "VID":            return <Film      size={14} className={cls} />
+    case "DOC":            return <FileText  size={14} className={cls} />
   }
 }
 
 function TypeBadge({ type }: { type: MessageType }) {
   const styles: Record<MessageType, string> = {
-    CHAT_NOTIFICATION: "border-yellow-500/40 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
-    TEXT:              "border-primary/40 bg-primary/10 text-primary",
-    IMG:               "border-pink-500/40 bg-pink-500/10 text-pink-600 dark:text-pink-400",
-    VID:               "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400",
-    DOC:               "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    SYSTEM_MESSAGE: "border-yellow-500/40 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+    TEXT:           "border-primary/40 bg-primary/10 text-primary",
+    IMG:            "border-pink-500/40 bg-pink-500/10 text-pink-600 dark:text-pink-400",
+    VID:            "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    DOC:            "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
   }
   return (
     <Badge variant="outline" className={`text-xs gap-1.5 ${styles[type]}`}>
@@ -108,17 +118,64 @@ function InfoRow({
   )
 }
 
+// ── Map raw API response → local Message type ─────────────────────────────────
+
+function mapMessage(raw: any): Message {
+  return {
+    id:             raw.id,
+    chat_id:        raw.chatId        ?? raw.chat_id,
+    status:         raw.status        ?? true,
+    state:          raw.state         ?? "ORIGIN",
+    type:           raw.type          ?? "TEXT",
+    content:        raw.content       ?? "",
+    sender_id:      raw.senderId      ?? raw.sender_id      ?? null,
+    sender_name:    raw.senderName    ?? raw.sender_name    ?? null,
+    sender_avatar:  raw.senderAvatar  ?? raw.sender_avatar  ?? null,
+    predecessor_id: raw.predecessorId ?? raw.predecessor_id ?? null,
+    sent_date:      raw.sentDate      ?? raw.sent_date      ?? null,
+    removed_date:   raw.removedDate   ?? raw.removed_date   ?? null,
+    created_date:   raw.createdDate   ?? raw.created_date,
+  }
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function AdminContentMessage() {
-  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate();
 
-  const [message, setMessage]   = useState<Message>(MOCK_MESSAGE)
+  const { id } = useParams<{ id: string }>()
+  const { messageDetail, fetchById, activate, loading } = useMessageService()
+
+  const [message, setMessage]       = useState<Message | null>(null)
   const [toggleOpen, setToggleOpen] = useState(false)
 
-  const handleToggleStatus = () => {
-    setMessage(prev => ({ ...prev, status: !prev.status }))
-    setToggleOpen(false)
+  // Fetch on mount
+  useEffect(() => {
+    if (id) fetchById(id)
+  }, [id])
+
+  // Sync raw API response into local state
+  useEffect(() => {
+    if (messageDetail) setMessage(mapMessage(messageDetail))
+  }, [messageDetail])
+
+  const handleToggleStatus = async () => {
+    if (!message) return
+    try {
+      await activate(message.id)
+    } finally {
+      setToggleOpen(false)
+    }
+  }
+
+  if (loading || !message) {
+    return (
+      <div className="flex items-center justify-center h-full w-full bg-background">
+        <span className="text-muted-foreground">
+          {loading ? "Loading message…" : "Message not found."}
+        </span>
+      </div>
+    )
   }
 
   return (
@@ -128,7 +185,7 @@ export default function AdminContentMessage() {
       <AdminContentTopBar
         icon={<MessageSquare size={18} />}
         title="Message Detail"
-        subtitle={id ?? message.id}
+        subtitle={message.id}
         buttons={[
           {
             label: message.status ? "Deactivate" : "Activate",
@@ -136,8 +193,8 @@ export default function AdminContentMessage() {
             colorClass: message.status
               ? "border-destructive/40 text-destructive hover:bg-destructive/10"
               : "border-green-500/40 text-green-600 hover:bg-green-500/10 dark:text-green-400",
-            onClick: () => setToggleOpen(true)
-          }
+            onClick: () => setToggleOpen(true),
+          },
         ]}
       />
 
@@ -157,7 +214,7 @@ export default function AdminContentMessage() {
               {message.status ? "Active" : "Inactive"}
             </Badge>
             <StateBadge state={message.state} />
-            <TypeBadge  type={message.type} />
+            <TypeBadge  type={message.type}  />
           </div>
 
           {/* ── Content card ── */}
@@ -168,9 +225,7 @@ export default function AdminContentMessage() {
             </div>
             <div className="px-5 py-4">
               {message.state === "REMOVED" ? (
-                <p className="text-sm text-muted-foreground italic">
-                  This message has been removed.
-                </p>
+                <p className="text-sm text-muted-foreground italic">This message has been removed.</p>
               ) : message.type === "IMG" ? (
                 <img src={message.content} alt="Message Image" className="max-w-full rounded-lg max-h-96 object-contain border border-border bg-muted/10" />
               ) : message.type === "VID" ? (
@@ -201,30 +256,65 @@ export default function AdminContentMessage() {
 
             <div className="px-5 divide-y divide-border">
 
-              <InfoRow icon={<Hash size={14} />} label="Message ID">
-                <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                  {message.id}
-                </span>
-              </InfoRow>
+            <InfoRow icon={<Hash size={14} />} label="Message ID">
+              <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                {message.id}
+              </span>
+            </InfoRow>
 
-              <InfoRow icon={<MessageSquare size={14} />} label="Chat ID">
-                <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                  {message.chat_id}
-                </span>
-              </InfoRow>
+            <InfoRow icon={<MessageSquare size={14} />} label="Chat ID">
+              <button
+                onClick={() => navigate(`/admin/chat/${message.chat_id}`)}
+                className="font-mono text-xs px-2 py-0.5 rounded bg-muted text-primary hover:underline hover:bg-muted/70 transition-colors cursor-pointer"
+              >
+                {message.chat_id}
+              </button>
+            </InfoRow>
 
-              <InfoRow icon={<User size={14} />} label="Sender ID">
-                {message.sender_id
-                  ? <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">{message.sender_id}</span>
-                  : <span className="text-muted-foreground/50 text-xs">—</span>
-                }
-              </InfoRow>
+            <InfoRow icon={<User size={14} />} label="Sender">
+              {message.sender_id ? (
+                message.sender_id === "SYSTEM" ? (
+                  // System sender — not clickable
+                  <div className="flex flex-col gap-0.5">
+                    {message.sender_name && (
+                      <span className="text-sm font-medium text-foreground">{message.sender_name}</span>
+                    )}
+                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground w-max">
+                      {message.sender_id}
+                    </span>
+                  </div>
+                ) : (
+                  // Regular sender — clickable
+                  <button
+                    onClick={() => navigate(`/admin/user/${message.sender_id}`)}
+                    className="flex flex-col gap-0.5 text-left group"
+                  >
+                    {message.sender_name && (
+                      <span className="text-sm font-medium text-primary group-hover:underline">
+                        {message.sender_name}
+                      </span>
+                    )}
+                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted text-primary hover:bg-muted/70 transition-colors w-max">
+                      {message.sender_id}
+                    </span>
+                  </button>
+                )
+              ) : (
+                <span className="text-muted-foreground/50 text-xs">—</span>
+              )}
+            </InfoRow>
 
               <InfoRow icon={<Link size={14} />} label="Predecessor ID">
-                {message.predecessor_id
-                  ? <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">{message.predecessor_id}</span>
-                  : <span className="text-muted-foreground/50 text-xs">—</span>
-                }
+                {message.predecessor_id ? (
+                  <button
+                    onClick={() => navigate(`/admin/message/${message.predecessor_id}`)}
+                    className="font-mono text-xs px-2 py-0.5 rounded bg-muted text-primary hover:underline hover:bg-muted/70 transition-colors cursor-pointer"
+                  >
+                    {message.predecessor_id}
+                  </button>
+                ) : (
+                  <span className="text-muted-foreground/50 text-xs">—</span>
+                )}
               </InfoRow>
 
               <InfoRow icon={<Video size={14} />} label="Type">
@@ -243,9 +333,7 @@ export default function AdminContentMessage() {
               </InfoRow>
 
               <InfoRow icon={<Clock size={14} />} label="Created Date">
-                <span className="text-sm">
-                  {format(new Date(message.created_date), "dd MMM yyyy, HH:mm:ss")}
-                </span>
+                <span className="text-sm">{format(new Date(message.created_date), "dd MMM yyyy, HH:mm:ss")}</span>
               </InfoRow>
 
               <InfoRow icon={<Clock size={14} />} label="Removed Date">
