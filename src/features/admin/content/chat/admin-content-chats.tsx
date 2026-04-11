@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +21,8 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import type { DateRange } from "react-day-picker"
+import { AdminContentTopBar } from "../../components/admin-content-top-bar"
+import { chatAdminService } from "@/services/chat-admin-service"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,78 +33,64 @@ type Chat = {
   status: boolean
   type: ChatType
   name: string
-  avatar: string
-  initiator_id: string
-  newest_message_id: string | null
-  newest_message_date: string | null
-  created_date: string
-  updated_date: string
+  avatar?: string
+  initiatorId: string
+  newestMessageId?: string | null
+  newestMessageDate?: string | null
+  createdDate: string
+  updatedDate: string
 }
-
-// ── Mock Data ─────────────────────────────────────────────────────────────────
-
-const MOCK_CHATS: Chat[] = [
-  { id: "CH001", status: true,  type: "PRIVATE", name: "Nguyễn Văn An & Trần Thị Bình",  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=1",  initiator_id: "ACC000000000001", newest_message_id: "MSG101", newest_message_date: "2024-11-02T13:45:00", created_date: "2023-03-10T10:05:00", updated_date: "2024-11-02T13:45:00" },
-  { id: "CH002", status: true,  type: "GROUP",   name: "Nhóm dự án Alpha",                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=G1", initiator_id: "ACC000000000007", newest_message_id: "MSG201", newest_message_date: "2024-11-01T18:20:00", created_date: "2023-06-01T08:00:00", updated_date: "2024-11-01T18:20:00" },
-  { id: "CH003", status: false, type: "PRIVATE", name: "Lê Minh Cường & Phạm Thị Dung",  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=3",  initiator_id: "ACC000000000003", newest_message_id: "MSG301", newest_message_date: "2024-09-30T11:10:00", created_date: "2023-05-18T15:35:00", updated_date: "2024-09-30T11:10:00" },
-  { id: "CH004", status: true,  type: "GROUP",   name: "Gia đình",                        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=G2", initiator_id: "ACC000000000001", newest_message_id: "MSG401", newest_message_date: "2024-10-15T20:00:00", created_date: "2022-12-25T00:00:00", updated_date: "2024-10-15T20:00:00" },
-  { id: "CH005", status: true,  type: "PRIVATE", name: "Hoàng Văn Em & Vũ Thị Phương",   avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=5",  initiator_id: "ACC000000000005", newest_message_id: "MSG501", newest_message_date: "2024-10-28T09:30:00", created_date: "2023-08-14T14:00:00", updated_date: "2024-10-28T09:30:00" },
-  { id: "CH006", status: false, type: "GROUP",   name: "Lớp học tiếng Anh",               avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=G3", initiator_id: "ACC000000000009", newest_message_id: null,     newest_message_date: null,               created_date: "2023-01-20T07:00:00", updated_date: "2023-01-20T07:00:00" },
-  { id: "CH007", status: true,  type: "PRIVATE", name: "Đặng Quốc Giang & Ngô Thanh Hùng", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=7", initiator_id: "ACC000000000007", newest_message_id: "MSG701", newest_message_date: "2024-11-03T08:15:00", created_date: "2024-01-05T09:15:00", updated_date: "2024-11-03T08:15:00" },
-  { id: "CH008", status: true,  type: "GROUP",   name: "Ban tổ chức sự kiện",             avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=G4", initiator_id: "ACC000000000002", newest_message_id: "MSG801", newest_message_date: "2024-10-31T16:00:00", created_date: "2024-03-15T10:00:00", updated_date: "2024-10-31T16:00:00" },
-  { id: "CH009", status: false, type: "PRIVATE", name: "Bùi Thị Hoa & Đinh Thị Lan",     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=8",  initiator_id: "ACC000000000008", newest_message_id: "MSG901", newest_message_date: "2024-07-10T14:20:00", created_date: "2023-11-01T11:00:00", updated_date: "2024-07-10T14:20:00" },
-  { id: "CH010", status: true,  type: "GROUP",   name: "Hội những người thích mèo",       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=G5", initiator_id: "ACC000000000012", newest_message_id: "MSG1001",newest_message_date: "2024-11-02T21:00:00", created_date: "2024-06-10T12:00:00", updated_date: "2024-11-02T21:00:00" },
-  { id: "CH011", status: true,  type: "PRIVATE", name: "Phan Văn Minh & Lý Thị Ngọc",    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=11", initiator_id: "ACC000000000011", newest_message_id: "MSG1101",newest_message_date: "2024-10-20T10:10:00", created_date: "2024-02-28T08:30:00", updated_date: "2024-10-20T10:10:00" },
-  { id: "CH012", status: false, type: "GROUP",   name: "Dự án nghiên cứu AI",             avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=G6", initiator_id: "ACC000000000013", newest_message_id: null,     newest_message_date: null,               created_date: "2023-09-01T09:00:00", updated_date: "2023-09-01T09:00:00" },
-]
 
 const PAGE_SIZE = 10
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AdminContentChats() {
+  const navigate = useNavigate()
+  const [chats, setChats]                     = useState<Chat[]>([])
+  const [loading, setLoading]                 = useState(true)
   const [search, setSearch]                   = useState("")
   const [statusFilter, setStatus]             = useState("all")
   const [typeFilter, setType]                 = useState("all")
   const [createdRange, setCreatedRange]       = useState<DateRange | undefined>()
   const [newestMsgRange, setNewestMsgRange]   = useState<DateRange | undefined>()
   const [page, setPage]                       = useState(1)
+  const [hasMore, setHasMore]                 = useState(true)
 
-  // ── Filter ────────────────────────────────────────────────────────────────
-  const filtered = MOCK_CHATS.filter(c => {
-    const matchSearch =
-      search === "" ||
-      c.id.toLowerCase().includes(search.toLowerCase()) ||
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.initiator_id.toLowerCase().includes(search.toLowerCase())
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setLoading(true)
+      try {
+        const s = statusFilter === "active" ? true : statusFilter === "inactive" ? false : undefined;
+        const t = typeFilter !== "all" ? typeFilter : undefined;
+        // The API only has createdDateStart/createdDateEnd inside ChatQueryParams currently
+        const cdStart = createdRange?.from ? format(createdRange.from, "yyyy-MM-dd") : undefined;
+        const cdEnd = createdRange?.to ? format(createdRange.to, "yyyy-MM-dd") : undefined;
 
-    const matchStatus =
-      statusFilter === "all" ? true :
-      statusFilter === "active" ? c.status : !c.status
+        const res = await chatAdminService.getChats({
+          keywords: search,
+          page: page - 1,
+          size: PAGE_SIZE,
+          status: s,
+          type: t,
+          createdDateStart: cdStart,
+          createdDateEnd: cdEnd
+        });
 
-    const matchType =
-      typeFilter === "all" ? true : c.type === typeFilter
-
-    const created = new Date(c.created_date)
-    const matchCreated =
-      !createdRange ? true :
-      (!createdRange.from || created >= createdRange.from) &&
-      (!createdRange.to   || created <= createdRange.to)
-
-    const matchNewest =
-      !newestMsgRange ? true :
-      !c.newest_message_date ? false :
-      (() => {
-        const d = new Date(c.newest_message_date)
-        return (!newestMsgRange.from || d >= newestMsgRange.from) &&
-               (!newestMsgRange.to   || d <= newestMsgRange.to)
-      })()
-
-    return matchSearch && matchStatus && matchType && matchCreated && matchNewest
-  })
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+        if (active) {
+          const data = res.data || res;
+          setChats(data);
+          setHasMore(data.length === PAGE_SIZE);
+        }
+      } catch (err) {
+        console.error("Failed to load chats", err)
+      } finally {
+        if (active) setLoading(false)
+      }
+    })();
+    return () => { active = false }
+  }, [search, statusFilter, typeFilter, createdRange, newestMsgRange, page])
 
   const hasFilters = search || statusFilter !== "all" || typeFilter !== "all" || createdRange || newestMsgRange
 
@@ -118,22 +107,19 @@ export default function AdminContentChats() {
     <div className="flex flex-col h-full w-full overflow-hidden rounded-xl border border-border bg-background">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary">
-            <MessageSquare size={18} className="text-primary-foreground" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-foreground">Chats Manager</h2>
-            <p className="text-xs text-muted-foreground">{filtered.length} chats found</p>
-          </div>
-        </div>
-        {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-1.5 text-xs text-primary hover:text-primary">
-            <X size={13} /> Clear filters
-          </Button>
-        )}
-      </div>
+      <AdminContentTopBar
+        icon={<MessageSquare size={18} />}
+        title="Chats Manager"
+        subtitle={``}
+        buttons={hasFilters ? [
+          {
+            label: "Clear filters",
+            icon: <X size={13} />,
+            colorClass: "border-transparent shadow-none bg-transparent hover:bg-transparent text-primary hover:text-primary",
+            onClick: resetFilters
+          }
+        ] : []}
+      />
 
       {/* ── Filters ── */}
       <div className="flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-muted/10">
@@ -201,16 +187,23 @@ export default function AdminContentChats() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginated.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-20 text-sm text-muted-foreground">
+                  Loading chats...
+                </TableCell>
+              </TableRow>
+            ) : chats.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-20 text-sm text-muted-foreground">
                   No chats match your filters
                 </TableCell>
               </TableRow>
             ) : (
-              paginated.map((c, i) => (
+              chats.map((c, i) => (
                 <TableRow
                   key={c.id}
+                  onClick={() => navigate(`/admin/chat/${c.id}`)}
                   className={`border-b border-border hover:bg-accent transition-colors cursor-pointer ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}
                 >
                   {/* ID */}
@@ -224,8 +217,8 @@ export default function AdminContentChats() {
                   <TableCell className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <Avatar className="w-8 h-8 border border-border shrink-0">
-                        <AvatarImage src={c.avatar} />
-                        <AvatarFallback className="text-xs bg-muted">{c.name[0]}</AvatarFallback>
+                        <AvatarImage src={c.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.id}`} />
+                        <AvatarFallback className="text-xs bg-muted">{c.name?.[0]}</AvatarFallback>
                       </Avatar>
                       <span className="text-xs font-medium text-foreground whitespace-nowrap max-w-[180px] truncate">
                         {c.name}
@@ -258,34 +251,34 @@ export default function AdminContentChats() {
                   {/* Initiator ID */}
                   <TableCell className="px-4 py-3">
                     <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
-                      {c.initiator_id}
+                      {c.initiatorId}
                     </span>
                   </TableCell>
 
                   {/* Newest message ID */}
                   <TableCell className="px-4 py-3">
-                    {c.newest_message_id
-                      ? <span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{c.newest_message_id}</span>
+                    {c.newestMessageId
+                      ? <span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">{c.newestMessageId}</span>
                       : <span className="text-xs text-muted-foreground/50">—</span>
                     }
                   </TableCell>
 
                   {/* Newest message date */}
                   <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                    {c.newest_message_date
-                      ? format(new Date(c.newest_message_date), "dd MMM yyyy, HH:mm")
+                    {c.newestMessageDate
+                      ? format(new Date(c.newestMessageDate), "dd MMM yyyy, HH:mm")
                       : <span className="text-muted-foreground/50">—</span>
                     }
                   </TableCell>
 
                   {/* Created date */}
                   <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                    {format(new Date(c.created_date), "dd MMM yyyy, HH:mm")}
+                    {c.createdDate ? format(new Date(c.createdDate), "dd MMM yyyy, HH:mm") : <span className="text-muted-foreground/50">—</span>}
                   </TableCell>
 
                   {/* Updated date */}
                   <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                    {format(new Date(c.updated_date), "dd MMM yyyy, HH:mm")}
+                    {c.updatedDate ? format(new Date(c.updatedDate), "dd MMM yyyy, HH:mm") : <span className="text-muted-foreground/50">—</span>}
                   </TableCell>
                 </TableRow>
               ))
@@ -297,7 +290,7 @@ export default function AdminContentChats() {
       {/* ── Pagination ── */}
       <div className="flex items-center justify-between px-6 py-3 border-t border-border bg-muted/10">
         <span className="text-xs text-muted-foreground">
-          Showing {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+          Page {page}
         </span>
 
         <div className="flex items-center gap-1">
@@ -307,29 +300,12 @@ export default function AdminContentChats() {
             <ChevronLeft size={14} />
           </Button>
 
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-            .reduce<(number | "...")[]>((acc, p, idx, arr) => {
-              if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...")
-              acc.push(p)
-              return acc
-            }, [])
-            .map((p, i) =>
-              p === "..." ? (
-                <span key={`e-${i}`} className="text-xs px-1 text-muted-foreground">…</span>
-              ) : (
-                <Button key={p} variant={page === p ? "default" : "outline"}
-                  size="icon" className="h-7 w-7 text-xs"
-                  onClick={() => setPage(p as number)}
-                >
-                  {p}
-                </Button>
-              )
-            )
-          }
+          <Button variant="default" size="icon" className="h-7 w-7 text-xs">
+            {page}
+          </Button>
 
           <Button variant="outline" size="icon" className="h-7 w-7"
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+            onClick={() => setPage(p => p + 1)} disabled={!hasMore}
           >
             <ChevronRight size={14} />
           </Button>

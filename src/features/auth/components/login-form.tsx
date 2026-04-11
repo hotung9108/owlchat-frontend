@@ -15,10 +15,19 @@ import { useAuth } from "../../../hooks/use-auth";
 import { CheckCircle2Icon, AlertCircleIcon } from "lucide-react";
 import { CustomAlert } from "@/components/shared/alert/custom-alert";
 
+export interface LoginFormProps extends React.ComponentProps<"div"> {
+    navigateUrl?: string;
+    title?: string;
+    description?: string;
+}
+
 export function LoginForm({
     className,
+    navigateUrl = "/conversations",
+    title = "Welcome back",
+    description = "Login to your OwlChat account",
     ...props
-}: React.ComponentProps<"div">) {
+}: LoginFormProps) {
     const [alertMessage, setAlertMessage] = useState<string | null>(null);
     const [alertType, setAlertType] = useState<"success" | "error" | null>(
         null,
@@ -37,7 +46,7 @@ export function LoginForm({
             setShowAlert(true);
             setTimeout(() => {
                 setShowAlert(false);
-                navigate("/conversations");
+                navigate(navigateUrl);
             }, 2000);
         } catch (error: any) {
             const errorMessage =
@@ -66,10 +75,10 @@ export function LoginForm({
                         <FieldGroup>
                             <div className="flex flex-col items-center gap-2 text-center">
                                 <h1 className="text-2xl font-bold">
-                                    Welcome back
+                                    {title}
                                 </h1>
                                 <p className="text-muted-foreground text-balance">
-                                    Login to your OwlChat account
+                                    {description}
                                 </p>
                             </div>
                             <Field>

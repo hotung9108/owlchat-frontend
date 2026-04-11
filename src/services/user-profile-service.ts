@@ -22,6 +22,7 @@ export const userProfileService = {
         dateOfBirthStart?: string,
         dateOfBirthEnd?: string,
         ascSort: boolean = true,
+        status: number = 0
     ): Promise<UserProfile[]> {
         const params = {
             keywords,
@@ -31,6 +32,7 @@ export const userProfileService = {
             dateOfBirthStart,
             dateOfBirthEnd,
             ascSort,
+            status
         };
         const response = await apiClient.get(`${USER_PROFILE_BASE_URL}`, {
             params,
