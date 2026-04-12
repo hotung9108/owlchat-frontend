@@ -40,13 +40,20 @@ export function LoginForm({
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await login({ username, password });
+            const response = await login({ username, password });
             setAlertMessage("Login successful! Redirecting...");
             setAlertType("success");
             setShowAlert(true);
             setTimeout(() => {
                 setShowAlert(false);
-                navigate(navigateUrl);
+                // Redirect based on role from response
+                if (response.role === "ADMIN") {
+                    navigate("/admin");
+                } else if (response.role === "USER" || response.role === "BUSINESS") {
+                    navigate("/conversations");
+                } else {
+                    navigate(navigateUrl);
+                }
             }, 2000);
         } catch (error: any) {
             const errorMessage =

@@ -3,21 +3,21 @@ import { logout, login, refreshToken } from "../services/account-service";
 
 // import type { LoginRequest, LoginResponse } from "../features/auth/types/auth.type";
 import type { LoginRequest, LoginResponse } from "@/types/auth.type";
+import type { AccountRole } from "@/types/enum/account-role";
+
 export function useAuth() {
-    // const [user, setUser] = useState<LoginResponse | null>(null);
+    const [role, setRole] = useState<AccountRole | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
-        // const storedToken = localStorage.getItem("accessToken");
-        // const storedUser = localStorage.getItem("user");
-
-        // if (storedToken && storedUser) {
-        //     setUser(JSON.parse(storedUser));
-        // }
+        const storedRole = localStorage.getItem("userRole");
+        if (storedRole) {
+            setRole(storedRole as AccountRole);
+        }
         setLoading(false);
     }, []);
 
-    const handleLogin = async (params: LoginRequest) => {
+    const handleLogin = async (params: LoginRequest): Promise<LoginResponse> => {
         try {
             const response = await login(params);
             if (!response.status) {
@@ -27,8 +27,10 @@ export function useAuth() {
             }
             localStorage.setItem("accessToken", response.accessToken);
             localStorage.setItem("refreshToken", response.refreshToken);
-            // localStorage.setItem("user", JSON.stringify(response));
-            // setUser(response);
+            localStorage.setItem("userRole", response.role);
+            console.log(response.role);
+            setRole(response.role);
+            return response;
         } catch (error) {
             console.error("Login failed:", error);
             throw error;
@@ -37,14 +39,14 @@ export function useAuth() {
 
     const handleLogout = async () => {
         try {
-            const refreshToken = localStorage.getItem("refreshToken");
-            if (refreshToken) {
-                await logout({ refreshToken });
+            const refreshTokenValue = localStorage.getItem("refreshToken");
+            if (refreshTokenValue) {
+                await logout({ refreshToken: refreshTokenValue });
             }
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
-            // localStorage.removeItem("user");
-            // setUser(null);
+            localStorage.removeItem("userRole");
+            setRole(null);
         } catch (error) {
             console.error("Logout failed:", error);
             throw error;
@@ -66,11 +68,26 @@ export function useAuth() {
         }
     };
 
+    const isAuthenticated = (): boolean => {
+        return !!localStorage.getItem("refreshToken");
+    };
+
+    const getRole = (): AccountRole | null => {
+        return role;
+    };
+
+    const isAdmin = (): boolean => {
+        return role === "ADMIN";
+    };
+
     return {
-        // user,
+        role,
         loading,
         login: handleLogin,
         logout: handleLogout,
         refreshToken: handleRefreshToken,
+        isAuthenticated,
+        getRole,
+        isAdmin,
     };
 }
