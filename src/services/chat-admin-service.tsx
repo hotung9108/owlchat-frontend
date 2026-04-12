@@ -1,7 +1,7 @@
 import apiClient from "@/lib/axios";
 import { API_ENDPOINTS } from "@/config/api";
 
- and 
+const CHAT_API = `${API_ENDPOINTS.CHAT_SERVICE}/admin/chat`;
 
 /* ---------------- TYPES ---------------- */
 

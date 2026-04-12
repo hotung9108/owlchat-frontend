@@ -7,6 +7,7 @@ import { useFriendshipAdminService } from "@/hooks/use-friendship-admin"
 import { useFriendRequestService } from "@/hooks/use-friend-request-admin"
 import { useBlockService } from "@/hooks/use-block-admin"
 import { useUserProfile } from "@/hooks/use-user-profile"
+import { useMemberAdminService } from "@/hooks/use-chat-member-admin"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -137,6 +138,7 @@ export default function AdminContentUser() {
   const { updateStatus } = useAccountService()
   {/* NEW HOOK */}
   const { fetchProfileById } = useUserProfile()
+  const { remove: removeChatMember } = useMemberAdminService()
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [user, setUser]                   = useState<UserProfile>(INITIAL_USER)
@@ -364,6 +366,20 @@ export default function AdminContentUser() {
     return <div className="flex items-center justify-center h-full w-full bg-background"><span className="text-muted-foreground">Loading user data...</span></div>
   }
 
+  const handleLeaveChat = async (chatId: string) => {
+    if (!id) return;
+    try {
+      await removeChatMember(id, chatId);
+
+      // update UI (remove chat)
+      setChats(prev => prev.filter(c => c.id !== chatId));
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to leave chat");
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden rounded-xl bg-background">
 
@@ -572,7 +588,7 @@ export default function AdminContentUser() {
                 <Table className="min-w-max">
                   <TableHeader>
                     <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
-                      {["ID", "Chat", "Type", "Status", "Initiator", "Latest Message", "Created Date"].map(h => (
+                      {["ID", "Chat", "Type", "Status", "Initiator", "Latest Message", "Created Date", "Actions"].map(h => (
                         <TableHead key={h} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 whitespace-nowrap">{h}</TableHead>
                       ))}
                     </TableRow>
@@ -617,6 +633,17 @@ export default function AdminContentUser() {
                             </TableCell>
                             <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{c.newest_message_date ? format(new Date(c.newest_message_date), "dd MMM yyyy, HH:mm") : "—"}</TableCell>
                             <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{c.created_date ? format(new Date(c.created_date), "dd MMM yyyy, HH:mm") : "—"}</TableCell>
+                            <TableCell className="px-4 py-3">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation(); // 🔥 VERY IMPORTANT (prevent row click)
+                                  handleLeaveChat(c.id);
+                                }}
+                                className="text-xs px-3 py-1.5 rounded-md border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                              >
+                                Leave
+                              </button>
+                            </TableCell>
                           </TableRow>
                         );
                       })
