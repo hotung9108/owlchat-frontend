@@ -37,22 +37,38 @@ apiClient.interceptors.request.use((config) => {
 // Response interceptor to handle 401 errors and JSON parsing errors
 apiClient.interceptors.response.use(
     (response) => {
-        // Only validate JSON for actual JSON responses
         const contentType = response.headers["content-type"] || "";
-        if (contentType.includes("application/json") && response.data && typeof response.data === "string") {
-            try {
-                JSON.parse(response.data);
-            } catch (jsonError) {
-                console.error("Invalid JSON response from server:", jsonError);
-                return Promise.reject(
-                    new Error("Server returned invalid JSON response"),
-                );
+
+        if (typeof response.data === "string" && response.data.trim() !== "") {
+            if (contentType.includes("application/json")) {
+                // Content-Type says JSON but body is still a raw string → try to parse
+                try {
+                    response.data = JSON.parse(response.data);
+                } catch {
+                    // Couldn't parse → treat as a plain-text message object
+                    response.data = { message: response.data };
+                }
+            } else {
+                // Plain text / no content-type → wrap in a consistent shape
+                response.data = { message: response.data };
             }
         }
+
         return response;
     },
     async (error) => {
         const originalRequest = error.config;
+
+        // Normalise a plain-string error body so callers can always do
+        // err?.response?.data?.message
+        if (error.response && typeof error.response.data === "string" && error.response.data.trim() !== "") {
+            const raw = error.response.data.trim();
+            error.response.data = { message: raw };
+            // Preserve the server message on error.message as well
+            if (!error.message || error.message === "Request failed with status code " + error.response.status) {
+                error.message = raw;
+            }
+        }
 
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;

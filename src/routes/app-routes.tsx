@@ -17,6 +17,7 @@ import AdminContentUsers from "@/features/admin/content/user/admin-content-users
 import AdminChatDetails from "@/features/admin/content/chat/admin-content-chat";
 import AdminContentMessage from "@/features/admin/content/chat/admin-content-message";
 import { ProtectedRoute } from "@/components/protected-route";
+import PinCodePage from "@/features/auth/pages/account-authenticate-page";
 
 const AppRoutes = () => {
     return (
@@ -29,8 +30,9 @@ const AppRoutes = () => {
             <Route path="/friends" element={<FriendPage />} />
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/admin/login" element={<AdminLoginPage />} />
+            {/* <Route path="/admin/login" element={<AdminLoginPage />} /> */}
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/authenticate" element={<PinCodePage />} />
 {/* <!--             <Route path="/profile" element={<UserProfilePage />} /> --> */}
             
             <Route path="/admin" element={<ProtectedRoute requiredRole="ADMIN"><AdminPage children={<AdminContentFallback></AdminContentFallback>} /></ProtectedRoute>}/>
