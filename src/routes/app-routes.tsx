@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "@/features/auth/pages/login-page";
-import AdminLoginPage from "@/features/auth/pages/admin-login-page";
 import RegisterPage from "@/features/auth/pages/register-page";
 import ConversationPage from "@/features/user/conversation/conversation-page";
 import ConversationDetailPage from "@/features/user/conversation/conversation-detail-page";

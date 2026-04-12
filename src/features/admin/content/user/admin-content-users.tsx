@@ -30,16 +30,21 @@ import {
   CalendarIcon,
   X,
   Users,
+  Plus
 } from "lucide-react"
 import { format } from "date-fns"
 import type { DateRange } from "react-day-picker"
 import { useNavigate as AppRoute } from "react-router-dom"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
+import { useUserProfile } from "@/hooks/use-user-profile"
 
 // ── Types & Component ─────────────────────────────────────────────────────────
 
 import { userProfileService } from "@/services/user-profile-service"
 import type { UserProfile } from "@/types/user-profile.type"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { accountService } from "@/services/real-account-service"
 
 const PAGE_SIZE = 10
 
@@ -92,21 +97,113 @@ export default function UsersManager() {
 
   const router = AppRoute();
 
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const [createForm, setCreateForm] = useState({
+    role: "USER",
+    username: "",
+    password: "",
+    email: "",
+    name: "",
+    phone_number: "",
+    date_of_birth: "",
+    gender: null as boolean | null,
+    avatar: "",
+  });
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 25 * 1024 * 1024) {
+      alert("Image must be under 25MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setCreateForm(f => ({
+        ...f,
+        avatar: ev.target?.result as string,
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCreateUser = async () => {
+    if (!createForm.username || !createForm.password || !createForm.email) {
+      alert("Username, password and email are required");
+      return;
+    }
+
+    try {
+      // 1. Create the account
+      const accountRes = await accountService.createAccount({
+        role: createForm.role,
+        username: createForm.username,
+        password: createForm.password,
+      });
+      const accountId: string = accountRes.data.id;
+
+      // 2. Create the user profile linked to the new account
+      await userProfileService.addNewProfileToAccount(accountId, {
+        name: createForm.name || createForm.username,
+        email: createForm.email,
+        phoneNumber: createForm.phone_number,
+        gender: createForm.gender ?? undefined,
+        dateOfBirth: createForm.date_of_birth || undefined,
+      });
+
+      // 3. Reset form & close dialog
+      setCreateForm({
+        role: "USER",
+        username: "",
+        password: "",
+        email: "",
+        name: "",
+        phone_number: "",
+        date_of_birth: "",
+        gender: null,
+        avatar: "",
+      });
+      setCreateOpen(false);
+
+      // 4. Refresh the user list
+      setPage(1);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create user");
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden rounded-xl border border-border bg-background">
 
-      {/* ── Header ── */}
       <AdminContentTopBar
         icon={<Users size={18} />}
         title="Users Manager"
-        buttons={hasFilters ? [
+        buttons={[
+          ...(hasFilters
+            ? [
+                {
+                  label: "Clear filters",
+                  icon: <X size={13} />,
+                  colorClass:
+                    "border-transparent shadow-none bg-transparent hover:bg-transparent text-primary hover:text-primary",
+                  onClick: resetFilters,
+                },
+              ]
+            : []),
+
           {
-            label: "Clear filters",
-            icon: <X size={13} />,
-            colorClass: "border-transparent shadow-none bg-transparent hover:bg-transparent text-primary hover:text-primary",
-            onClick: resetFilters
-          }
-        ] : []}
+            label: "Add User",
+            icon: <Plus size={14} />,
+            colorClass: "bg-primary text-primary hover:text-primary",
+            onClick: () => {
+              setCreateOpen(true)
+            },
+          },
+        ]}
       />
 
       {/* ── Filters ── */}
@@ -293,6 +390,151 @@ export default function UsersManager() {
           </Button>
         </div>
       </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-lg h-[90vh] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Add User</DialogTitle>
+            <DialogDescription>
+              Create a new user account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-y-auto pr-2 scrollbar-thin">
+            <div className="grid gap-4 py-2">
+              {/* Role */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Role</Label>
+
+                  <Select
+                    value={createForm.role || "USER"}
+                    onValueChange={(v) =>
+                      setCreateForm((f) => ({
+                        ...f,
+                        role: v as "USER" | "ADMIN",
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="text-xs">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      <SelectItem value="USER">User</SelectItem>
+                      <SelectItem value="ADMIN">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+              </div>
+
+              {/* Username */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Username *</Label>
+                <Input
+                  value={createForm.username}
+                  onChange={e => setCreateForm(f => ({ ...f, username: e.target.value }))}
+                  placeholder="username"
+                />
+              </div>
+
+              {/* Password */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Password *</Label>
+                <Input
+                  type="password"
+                  value={createForm.password}
+                  onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="password"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Email *</Label>
+                <Input
+                  type="email"
+                  value={createForm.email}
+                  onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="email@example.com"
+                />
+              </div>
+
+              {/* Optional fields */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Name</Label>
+                <Input
+                  value={createForm.name}
+                  onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Full name"
+                />
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Phone</Label>
+                <Input
+                  value={createForm.phone_number}
+                  onChange={e => setCreateForm(f => ({ ...f, phone_number: e.target.value }))}
+                />
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Date of Birth</Label>
+                <Input
+                  type="date"
+                  value={createForm.date_of_birth}
+                  onChange={e => setCreateForm(f => ({ ...f, date_of_birth: e.target.value }))}
+                />
+              </div>
+
+              {/* Gender */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Gender</Label>
+                <Select
+                  value={
+                    createForm.gender === null
+                      ? "none"
+                      : createForm.gender
+                      ? "male"
+                      : "female"
+                  }
+                  onValueChange={v =>
+                    setCreateForm(f => ({
+                      ...f,
+                      gender: v === "none" ? null : v === "male",
+                    }))
+                  }
+                >
+                  <SelectTrigger className="text-xs">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Avatar (reuse yours) */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Avatar</Label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-shrink-0 pt-2 border-t bg-background">
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateUser}>
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -424,7 +424,7 @@ export default function AdminContentUser() {
                 <InfoField icon={<Mail size={14} />}     label="Email"         value={user.email || "—"} />
                 <InfoField icon={<Phone size={14} />}    label="Phone"         value={user.phone_number} />
                 <InfoField icon={<User size={14} />}     label="Gender"        value={user.gender ? "Male" : "Female"} />
-                <InfoField icon={<Calendar size={14} />} label="Date of Birth" value={format(new Date(user.date_of_birth), "dd MMM yyyy")} />
+                <InfoField icon={<Calendar size={14} />} label="Date of Birth" value={user.date_of_birth ? format(new Date(user.date_of_birth), "dd MMM yyyy") : ""} />
                 <InfoField icon={<Shield size={14} />}   label="Role"          value={user.role} />
                 <InfoField icon={<Clock size={14} />}    label="Created"       value={format(new Date(user.created_date), "dd MMM yyyy, HH:mm")} />
                 <InfoField icon={<Clock size={14} />}    label="Last Updated"  value={format(new Date(user.updated_date), "dd MMM yyyy, HH:mm")} />
