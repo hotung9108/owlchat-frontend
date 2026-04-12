@@ -16,6 +16,8 @@ import AdminContentUser from "@/features/admin/content/user/admin-content-user";
 import AdminContentUsers from "@/features/admin/content/user/admin-content-users";
 import AdminChatDetails from "@/features/admin/content/chat/admin-content-chat";
 import AdminContentMessage from "@/features/admin/content/chat/admin-content-message";
+import { ProtectedRoute } from "@/components/protected-route";
+
 const AppRoutes = () => {
     return (
         <Routes>
@@ -31,12 +33,12 @@ const AppRoutes = () => {
             <Route path="/register" element={<RegisterPage />} />
 {/* <!--             <Route path="/profile" element={<UserProfilePage />} /> --> */}
             
-            <Route path="/admin" element={<AdminPage children={<AdminContentFallback></AdminContentFallback>} />}/>
-            <Route path="/admin/users" element={<AdminPage children={<AdminContentUsers></AdminContentUsers>}></AdminPage>}/>
-            <Route path="/admin/user/:id" element={<AdminPage children={<AdminContentUser></AdminContentUser>}></AdminPage>}/>
-            <Route path="/admin/chats" element={<AdminPage children={<AdminContentChats></AdminContentChats>}></AdminPage>}/>
-            <Route path="/admin/chat/:id" element={<AdminPage children={<AdminChatDetails></AdminChatDetails>}></AdminPage>}/>
-            <Route path="/admin/message/:id" element={<AdminPage children={<AdminContentMessage></AdminContentMessage>}></AdminPage>}/>
+            <Route path="/admin" element={<ProtectedRoute requiredRole="ADMIN"><AdminPage children={<AdminContentFallback></AdminContentFallback>} /></ProtectedRoute>}/>
+            <Route path="/admin/users" element={<ProtectedRoute requiredRole="ADMIN"><AdminPage children={<AdminContentUsers></AdminContentUsers>}></AdminPage></ProtectedRoute>}/>
+            <Route path="/admin/user/:id" element={<ProtectedRoute requiredRole="ADMIN"><AdminPage children={<AdminContentUser></AdminContentUser>}></AdminPage></ProtectedRoute>}/>
+            <Route path="/admin/chats" element={<ProtectedRoute requiredRole="ADMIN"><AdminPage children={<AdminContentChats></AdminContentChats>}></AdminPage></ProtectedRoute>}/>
+            <Route path="/admin/chat/:id" element={<ProtectedRoute requiredRole="ADMIN"><AdminPage children={<AdminChatDetails></AdminChatDetails>}></AdminPage></ProtectedRoute>}/>
+            <Route path="/admin/message/:id" element={<ProtectedRoute requiredRole="ADMIN"><AdminPage children={<AdminContentMessage></AdminContentMessage>}></AdminPage></ProtectedRoute>}/>
             
             <Route path="profile" element={<ProfileLayout />}>
                 <Route index element={<ProfilePage />} />
