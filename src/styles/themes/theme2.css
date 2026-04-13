@@ -1,0 +1,45 @@
+/* Theme 2 - Purple Sunset */
+
+:root[data-theme="theme2"] {
+    --background: oklch(0.98 0.01 270);
+    --foreground: oklch(0.3 0.05 280);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.3 0.05 280);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.3 0.05 280);
+    --primary: oklch(0.65 0.2 280);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.92 0.03 320);
+    --secondary-foreground: oklch(0.4 0.03 290);
+    --muted: oklch(0.96 0.003 270);
+    --muted-foreground: oklch(0.55 0.02 270);
+    --accent: oklch(0.92 0.08 20);
+    --accent-foreground: oklch(0.3 0.05 280);
+    --destructive: oklch(0.64 0.21 25);
+    --border: oklch(0.93 0.006 270);
+    --input: oklch(0.93 0.006 270);
+    --ring: oklch(0.65 0.2 280);
+    --logo-filter: invert(0.6) sepia(0.8) saturate(2) hue-rotate(250deg);
+}
+
+:root[data-theme="theme2"].dark {
+    --background: oklch(0.18 0.04 280);
+    --foreground: oklch(0.88 0.01 280);
+    --card: oklch(0.25 0.04 290);
+    --card-foreground: oklch(0.88 0.01 280);
+    --popover: oklch(0.25 0.04 290);
+    --popover-foreground: oklch(0.88 0.01 280);
+    --primary: oklch(0.75 0.15 290);
+    --primary-foreground: oklch(0.18 0.04 280);
+    --secondary: oklch(0.32 0.035 300);
+    --secondary-foreground: oklch(0.7 0.015 320);
+    --muted: oklch(0.24 0.03 280);
+    --muted-foreground: oklch(0.55 0.02 270);
+    --accent: oklch(0.87 0.08 20);
+    --accent-foreground: oklch(0.7 0.015 320);
+    --destructive: oklch(0.64 0.21 25);
+    --border: oklch(0.45 0.03 280);
+    --input: oklch(0.45 0.03 280);
+    --ring: oklch(0.75 0.15 290);
+    --logo-filter: invert(0.6) sepia(0.8) saturate(2) hue-rotate(250deg);
+}

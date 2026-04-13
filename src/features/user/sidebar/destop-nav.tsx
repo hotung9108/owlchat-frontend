@@ -143,6 +143,9 @@ export default function DesktopNav() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate("/theme-settings")}>
+                            Theme Settings
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate("/profile")}>
                             My Profile
                         </DropdownMenuItem>

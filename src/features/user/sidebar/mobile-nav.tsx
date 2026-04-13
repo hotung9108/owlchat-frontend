@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, User } from "lucide-react";
+import { MessageSquare, User, Palette } from "lucide-react";
 import { useUserNavigation } from "../chat/hooks/userUserNavigation";
 import { useUserConversation } from "../chat/hooks/useUserConversation";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -89,6 +89,20 @@ export default function MobileNav() {
                         >
                             {/* Mode Toggle */}
                             <ModeToggle />
+
+                            {/* Theme Settings */}
+                            <Button
+                                size="icon"
+                                variant="outline"
+                                aria-label="Theme Settings"
+                                onClick={() => {
+                                    navigate("/theme-settings");
+                                    setIsSettingsOpen(false);
+                                }}
+                                title="Theme Settings"
+                            >
+                                <Palette className="w-5 h-5" />
+                            </Button>
 
                             {/* Notification Icon */}
                             <Button

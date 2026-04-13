@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { userProfileService } from "@/services/user-profile-service";
 import type {
     UserProfile,
@@ -11,6 +11,10 @@ export const useUserProfile = () => {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const [pageSize, setPageSize] = useState(10);
 
     const fetchProfiles = useCallback(
         async (
@@ -25,7 +29,7 @@ export const useUserProfile = () => {
             setLoading(true);
             setError(null);
             try {
-                const data = await userProfileService.getProfiles(
+                const response = await userProfileService.getProfiles(
                     keywords,
                     page,
                     size,
@@ -34,7 +38,11 @@ export const useUserProfile = () => {
                     dateOfBirthEnd,
                     ascSort,
                 );
-                setProfiles(data);
+                setProfiles(response.content);
+                setCurrentPage(response.currentPage);
+                setTotalPages(response.totalPages);
+                setTotalElements(response.totalElements);
+                setPageSize(response.pageSize);
             } catch (err: any) {
                 setError(err.message || "Failed to fetch profiles");
             } finally {
@@ -44,17 +52,47 @@ export const useUserProfile = () => {
         [],
     );
 
+    const fetchAllProfiles = useCallback(
+        async (
+            keywords: string = "",
+            gender: number = 0,
+            dateOfBirthStart?: string,
+            dateOfBirthEnd?: string,
+            ascSort: boolean = true,
+        ) => {
+            setLoading(true);
+            setError(null);
+            try {
+                const allProfiles = await userProfileService.getAllProfiles(
+                    keywords,
+                    gender,
+                    dateOfBirthStart,
+                    dateOfBirthEnd,
+                    ascSort,
+                );
+                setProfiles(allProfiles);
+                setCurrentPage(0);
+                setTotalElements(allProfiles.length);
+                setTotalPages(1); // Will be calculated in component based on page size
+                setPageSize(12); // Default page size for discovery
+            } catch (err: any) {
+                setError(err.message || "Failed to fetch all profiles");
+            } finally {
+                setLoading(false);
+            }
+        },
+        [],
+    );
+
     const fetchProfileById = useCallback(async (id: string) => {
-        setLoading(true);
-        setError(null);
         try {
             const data = await userProfileService.getProfileById(id);
-            setProfile(data);
+            // Don't modify profile state - just return the fetched data
+            // profile state should only be modified by fetchUserProfile (current user)
             return data; 
         } catch (err: any) {
-            setError(err.message || "Failed to fetch profile");
-        } finally {
-            setLoading(false);
+            console.error("Failed to fetch profile:", err.message);
+            return null;
         }
     }, []);
 
@@ -158,7 +196,12 @@ export const useUserProfile = () => {
         profile,
         loading,
         error,
+        currentPage,
+        totalPages,
+        totalElements,
+        pageSize,
         fetchProfiles,
+        fetchAllProfiles,
         fetchProfileById,
         fetchUserProfile,
         createProfile,

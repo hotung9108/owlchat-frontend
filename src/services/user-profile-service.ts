@@ -9,6 +9,7 @@ import type {
     UserProfile,
     UserProfileCreateRequest,
     UserProfileRequest,
+    PaginatedResponse,
 } from "@/types/user-profile.type";
 
 const USER_PROFILE_BASE_URL = `${API_ENDPOINTS.USER_SERVICE}/user`;
@@ -23,7 +24,7 @@ export const userProfileService = {
         dateOfBirthEnd?: string,
         ascSort: boolean = true,
         status: number = 0
-    ): Promise<UserProfile[]> {
+    ): Promise<PaginatedResponse<UserProfile>> {
         const params = {
             keywords,
             page,
@@ -37,7 +38,61 @@ export const userProfileService = {
         const response = await apiClient.get(`${USER_PROFILE_BASE_URL}`, {
             params,
         });
-        return response.data;
+        
+        // Handle both array response and paginated response
+        if (Array.isArray(response.data)) {
+            return {
+                content: response.data,
+                totalElements: response.data.length,
+                totalPages: 1,
+                currentPage: page,
+                pageSize: size,
+                hasNext: false,
+                hasPrevious: page > 0,
+            };
+        }
+        
+        // If response already has pagination data
+        return {
+            content: response.data.content || response.data,
+            totalElements: response.data.totalElements || response.data.length || 0,
+            totalPages: response.data.totalPages || 1,
+            currentPage: response.data.number || response.data.currentPage || page,
+            pageSize: response.data.size || response.data.pageSize || size,
+            hasNext: response.data.hasNext !== undefined ? response.data.hasNext : page < (response.data.totalPages || 1) - 1,
+            hasPrevious: response.data.hasPrevious !== undefined ? response.data.hasPrevious : page > 0,
+        };
+    },
+
+    async getAllProfiles(
+        keywords: string = "",
+        gender: number = 0,
+        dateOfBirthStart?: string,
+        dateOfBirthEnd?: string,
+        ascSort: boolean = true,
+        status: number = 0
+    ): Promise<UserProfile[]> {
+        // Use page: -1 to get all users at once
+        const params = {
+            keywords,
+            page: -1,
+            size: 1000, // Large size to ensure we get all
+            gender,
+            dateOfBirthStart,
+            dateOfBirthEnd,
+            ascSort,
+            status
+        };
+        const response = await apiClient.get(`${USER_PROFILE_BASE_URL}`, {
+            params,
+        });
+        
+        // Handle both array response and paginated response
+        if (Array.isArray(response.data)) {
+            return response.data;
+        }
+        
+        return response.data.content || response.data;
     },
 
     async getProfileById(id: string): Promise<UserProfile> {
