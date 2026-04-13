@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Plus, Image as ImageIcon, Video as VideoIcon, FileText, Mic, SendHorizonal } from "lucide-react";
+import { Plus, Paperclip, Mic, SendHorizonal } from "lucide-react";
 import type { MessageType } from "@/types/enum/mesage-type";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,12 +41,9 @@ export default function ChatInput({
         setShowMoreOptions(false);
     };
 
-    const triggerUpload = (type: MessageType) => {
+    const triggerUpload = () => {
         if (fileInputRef.current) {
-            if (type === "IMG") fileInputRef.current.accept = "image/*";
-            else if (type === "VID") fileInputRef.current.accept = "video/*";
-            else fileInputRef.current.accept = ".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt";
-            
+            fileInputRef.current.accept = "image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt";
             fileInputRef.current.click();
         }
     };
@@ -106,31 +103,13 @@ export default function ChatInput({
                             {showMoreOptions && (
                                 <div className="absolute left-0 bottom-full mb-4 bg-card/95 border border-border/60 rounded-2xl shadow-2xl p-2 flex flex-col gap-1 min-w-[170px] animate-in fade-in slide-in-from-bottom-4 duration-300 backdrop-blur-xl z-50">
                                     <button 
-                                        onClick={() => triggerUpload("IMG")}
+                                        onClick={triggerUpload}
                                         className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium"
                                     >
-                                        <div className="w-8 h-8 rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-500">
-                                            <ImageIcon className="w-5 h-5" />
+                                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500">
+                                            <Paperclip className="w-5 h-5" />
                                         </div>
-                                        <span>Images</span>
-                                    </button>
-                                    <button 
-                                        onClick={() => triggerUpload("VID")}
-                                        className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium"
-                                    >
-                                        <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-500">
-                                            <VideoIcon className="w-5 h-5" />
-                                        </div>
-                                        <span>Videos</span>
-                                    </button>
-                                    <button 
-                                        onClick={() => triggerUpload("GENERIC_FILE")}
-                                        className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium"
-                                    >
-                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-500">
-                                            <FileText className="w-5 h-5" />
-                                        </div>
-                                        <span>Documents</span>
+                                        <span>Attachments</span>
                                     </button>
                                     <div className="h-px bg-border/40 my-1 mx-2" />
                                     <button className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium">

@@ -193,7 +193,7 @@ export default function ConversationDetailPage() {
 
     return (
         <ConversationsLayout>
-            <div className="flex w-full h-full gap-2 relative overflow-hidden">
+            <div className="flex w-full h-full gap-2 relative">
                 <ConversationContainer>
                     <ChatHeader
                         imageUrl={chatMetadata.avatar}
