@@ -145,12 +145,13 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                 />
                             )}
                             <div
-                                className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all
+                                className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all overflow-hidden
                                     ${isMe
                                         ? "bg-primary text-primary-foreground rounded-br-none self-end max-w-[75%]"
                                         : "bg-muted text-muted-foreground rounded-bl-none self-start max-w-[75%]"
                                     }
                                 `}
+                                style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                             >
                                 {message.type === "TEXT" && (
                                     editingMessageId === message.id ? (

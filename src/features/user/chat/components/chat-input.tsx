@@ -70,6 +70,11 @@ export default function ChatInput({
         if (message.trim() !== "") {
             onSendMessage(message);
             setMessage("");
+            // Reset textarea height
+            const textarea = document.querySelector('textarea[placeholder="Type a message..."]') as HTMLTextAreaElement;
+            if (textarea) {
+                textarea.style.height = 'auto';
+            }
         }
     };
 
@@ -132,14 +137,14 @@ export default function ChatInput({
                     
                     <div className="flex-1 min-h-[44px] relative group">
                         <textarea
-                            className="w-full max-h-[200px] border-none focus:ring-0 rounded-xl p-3 bg-muted/30 text-card-foreground resize-none scrollbar-hide text-sm leading-relaxed transition-all placeholder:text-muted-foreground/60"
+                            className="w-full max-h-[200px] border-none focus:ring-0 rounded-xl p-3 bg-muted/30 text-card-foreground resize-none scrollbar-hide text-sm leading-relaxed transition-all placeholder:text-muted-foreground/60 overflow-hidden"
                             rows={1}
                             placeholder="Type a message..."
                             value={message}
                             onChange={(e) => {
                                 setMessage(e.target.value);
                                 e.target.style.height = 'auto';
-                                e.target.style.height = e.target.scrollHeight + 'px';
+                                e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
                             }}
                             onKeyDown={handleKeyDown}
                             onPaste={handlePaste}

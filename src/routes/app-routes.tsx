@@ -9,6 +9,7 @@ import MarketplacePage from "@/features/user/coming-soon/marketplace-page";
 import FindsPage from "@/features/user/coming-soon/finds-page";
 import AdminPage from "@/features/admin/pages/admin-page";
 import AdminContentFallback from "@/features/admin/content/admin-content-fallback";
+import ThemeSettingsPage from "@/features/user/settings/theme-page";
 
 import ProfileLayout from "@/features/user/profile/profile-layout";
 import ProfilePage from "@/features/user/profile/profile-page";
@@ -30,6 +31,7 @@ const AppRoutes = () => {
                 element={<ConversationDetailPage />}
             />
             <Route path="/friends" element={<FriendPage />} />
+            <Route path="/theme-settings" element={<ThemeSettingsPage />} />
             <Route path="/groups" element={<GroupPage />} />
             <Route path="/marketplace" element={<MarketplacePage />} />
             <Route path="/finds" element={<FindsPage />} />

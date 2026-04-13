@@ -9,11 +9,13 @@ export default function ChatFallback() {
         text-secondary-foreground"
         >
             <div className="text-6xl mb-4 opacity-20">
-                <img
-                    src={owlLogo}
-                    alt="OwlChat Logo"
-                    className="h-32 w-32 filter invert-[0.8] sepia-[0.5] saturate-[1.5] hue-rotate-[180deg]"
-                />
+                <div style={{ filter: `var(--logo-filter, invert(0.8) sepia(0.5) saturate(1.5))` }}>
+                    <img
+                        src={owlLogo}
+                        alt="OwlChat Logo"
+                        className="h-32 w-32"
+                    />
+                </div>
             </div>
             <h2 className="text-2xl font-semibold text-slate-400">
                 Select a conversation to start chatting

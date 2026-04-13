@@ -72,11 +72,13 @@ export function LoginForm({
             <Card className="overflow-hidden p-0">
                 <CardContent className="grid p-0 md:grid-cols-2">
                     <div className="bg-muted relative hidden md:flex items-center justify-center">
-                        <img
-                            src={owlLogo512}
-                            alt="OwlChat Logo"
-                            className="h-32 w-32 filter invert-[0.8] sepia-[0.5] saturate-[1.5] hue-rotate-[180deg]"
-                        />
+                        <div style={{ filter: `var(--logo-filter, invert(0.8) sepia(0.5) saturate(1.5))` }}>
+                            <img
+                                src={owlLogo512}
+                                alt="OwlChat Logo"
+                                className="h-32 w-32"
+                            />
+                        </div>
                     </div>
                     <form className="p-6 md:p-8">
                         <FieldGroup>

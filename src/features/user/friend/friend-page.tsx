@@ -30,7 +30,7 @@ export default function FriendPage(props: Props) {
                 <ChatFullView>
                     <div className="flex flex-col lg:flex-row items-center justify-between w-full mt-4 lg:mt-6 lg:px-10">
                         <div className="flex items-center gap-4 mb-6 lg:mb-0 ">
-                            <div className="invert-[0.8] sepia-[0.5] saturate-[1.5]">
+                            <div style={{ filter: `var(--logo-filter, invert(0.8) sepia(0.5) saturate(1.5))` }}>
                                 <img
                                     src={owlLogo}
                                     alt="Owl Logo"
