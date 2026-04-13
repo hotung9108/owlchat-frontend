@@ -6,16 +6,39 @@ import AdminSidebarGroup from "./admin-sidebar-group";
 import { useLocation, useNavigate } from "react-router-dom"
 import type { SidebarGroup, UserInfor } from "../configs/admin-sidebar.config";
 import AdminSidebarUser from "./admin-sidebar-user";
+import { Button } from "@/components/ui/button";
+import { LogOut, Moon, Sun } from "lucide-react";
+import { ModeToggle } from "@/components/mode-toggle";
+import { useUserProfileContext } from "@/providers/user-profile-provider";
 
 interface AdminSidebarProps {
-  groups: SidebarGroup[]
-  user_infor: UserInfor
+    groups: SidebarGroup[]
+    user_infor: UserInfor
 }
 
 export default function AdminSidebar({groups, user_infor}: AdminSidebarProps) {
 
     const { pathname } = useLocation()
     const navigate = useNavigate()
+    const { profile } = useUserProfileContext();
+
+    const currentUser: UserInfor = profile ? {
+        id: profile.id,
+        avatar: profile.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`,
+        display_name: profile.name,
+        email: profile.email
+    } : user_infor;
+
+    const handleLogout = async () => {
+        try {
+            // Clear tokens
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            window.location.href = "/login";
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    };
     
     return (
         <Card className="h-full flex flex-col gap-4">
@@ -46,7 +69,9 @@ export default function AdminSidebar({groups, user_infor}: AdminSidebarProps) {
                     <div className="space-y-2">
                         {groups.map((group) => (
                             <div key={group.label} className="flex flex-col gap-2">
-                                <AdminSidebarGroup label={group.label} />
+                                <AdminSidebarGroup 
+                                    label={group.label} 
+                                />
 
                                 <nav className="flex flex-col gap-1">
                                 {group.items.map((item) => (
@@ -70,8 +95,24 @@ export default function AdminSidebar({groups, user_infor}: AdminSidebarProps) {
             <div>
                 <Separator />
 
-                <CardFooter className="p-0">
-                    <AdminSidebarUser user_infor={user_infor}></AdminSidebarUser>
+                <CardFooter className="flex items-center justify-between p-2">
+
+                    {/* Left: User info */}
+                    <AdminSidebarUser user_infor={currentUser} onClick={() => navigate("/conversations")}/>
+
+                    {/* Right: Actions */}
+                    <div className="flex items-center gap-1">
+
+                    {/* Theme toggle */}
+                    <ModeToggle />
+
+                    {/* Logout */}
+                    <Button variant="outline" size="icon" onClick={handleLogout}>
+                        <LogOut size={16} />
+                    </Button>
+
+                    </div>
+
                 </CardFooter>
             </div>
         </Card>

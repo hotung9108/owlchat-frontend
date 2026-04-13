@@ -409,11 +409,6 @@ export default function AdminContentUser() {
         subtitle={id}
         buttons={[
           {
-            label: "Edit Profile",
-            icon: <Pencil size={13} />,
-            onClick: openEdit
-          },
-          {
             label: user.status ? "Deactivate" : "Activate",
             icon: user.status ? <PowerOff size={13} /> : <Power size={13} />,
             colorClass: user.status
@@ -422,8 +417,15 @@ export default function AdminContentUser() {
             onClick: () => setToggleOpen(true)
           },
           {
+            label: "Edit Profile",
+            icon: <Pencil size={13} />,
+            colorClass: "bg-primary text-primary hover:text-primary cursor-pointer",
+            onClick: openEdit
+          },
+          {
             label: "Change Role",
             icon: <Shield size={13} />,
+            colorClass: "bg-primary text-blue-400 hover:text-blue cursor-pointer",
             onClick: () => {
               setSelectedRole(user.role === "ADMIN" ? "ADMIN" : "USER")
               setRoleDialogOpen(true)

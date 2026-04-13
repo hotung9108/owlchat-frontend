@@ -5,6 +5,7 @@ import {
   type CreateMessageRequest,
   type EditMessageRequest,
 } from "../services/message-admin-service";
+import type { TextMessageUserRequest } from "@/types/message.type";
 
 export function useMessageService() {
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,10 @@ export function useMessageService() {
     return messageService.send(data);
   };
 
+  const systemSend = async (data: TextMessageUserRequest) => {
+    return messageService.systemSend(data);
+  };
+  
   /* -------- EDIT -------- */
   const edit = async (messageId: string, data: EditMessageRequest) => {
     return messageService.edit(messageId, data);
@@ -111,6 +116,7 @@ export function useMessageService() {
     fetchAll,
     fetchById,
     send,
+    systemSend,
     edit,
 
     deleteHard,

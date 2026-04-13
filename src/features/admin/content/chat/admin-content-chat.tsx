@@ -165,7 +165,7 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
       remove: removeMemberApi,
       create: createMemberApi
     } = useMemberAdminService()
-    const { messages: rawMessages, fetchByChat, loading: messagesLoading } = useMessageService()
+    const { messages: rawMessages, fetchByChat, systemSend: sendMessageApi, loading: messagesLoading } = useMessageService()
     const { profiles: rawUsers, fetchProfiles } = useUserProfile()
 
     const [chat, setChat] = useState<Chat | null>(null)
@@ -222,19 +222,17 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
 
     // Map raw members API response to local type
     useEffect(() => {
-      if (rawMembers.length > 0) {
-        setMembers(rawMembers.map((m: any) => ({
-          member_id: m.memberId || m.member_id,
-          member_name: m.memberName || m.member_name || "Unknown",
-          member_avatar: m.memberAvatar || m.member_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.memberId || m.member_id}`,
-          chat_id: m.chatId || m.chat_id,
-          role: m.role,
-          nickname: m.nickname ?? null,
-          inviter_id: m.inviterId || m.inviter_id || null,
-          inviter_name: m.inviterName || m.inviter_name || null,
-          join_date: m.joinDate || m.join_date,
-        })))
-      }
+      setMembers(rawMembers.map((m: any) => ({
+        member_id: m.memberId || m.member_id,
+        member_name: m.memberName || m.member_name || "Unknown",
+        member_avatar: m.memberAvatar || m.member_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.memberId || m.member_id}`,
+        chat_id: m.chatId || m.chat_id,
+        role: m.role,
+        nickname: m.nickname ?? null,
+        inviter_id: m.inviterId || m.inviter_id || null,
+        inviter_name: m.inviterName || m.inviter_name || null,
+        join_date: m.joinDate || m.join_date,
+      })))
     }, [rawMembers])
 
     // Map raw messages API response to local type
@@ -321,6 +319,7 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
         );
 
         setOpenChatMemberEdit(false);
+        
         await refreshMembers();
 
       } catch (err) {
@@ -429,6 +428,41 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
       }
     };
 
+    const [openSendMessage, setOpenSendMessage] = useState(false);
+
+    const [message, setMessage] = useState("");
+    const [messageSubmitting, setMessageSubmitting] = useState(false);
+    const [sendMessageError, setSendMessageError] = useState("");
+
+    const handleSendMessage = async () => {
+      if (!message.trim()) return;
+
+      try {
+        setMessageSubmitting(true);
+        setSendMessageError("");
+
+        await sendMessageApi({
+          chatId: id!,
+          content: message.trim()
+        });
+
+        setMessage("");
+        setOpenSendMessage(false);
+
+        await refreshMessages(); // reload messages
+
+      } catch (err) {
+        console.error(err);
+        setSendMessageError("Failed to send message");
+      } finally {
+        setMessageSubmitting(false);
+      }
+    };
+
+    const refreshMessages = async () => {
+      if (id) await fetchByChat(id);
+    };
+
     if (loading || !chat) {
       return <div className="flex items-center justify-center h-full w-full bg-background"><span className="text-muted-foreground">Loading chat details...</span></div>
     }
@@ -458,6 +492,16 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
             icon: <Plus size={14} />,
             colorClass: "bg-primary text-primary hover:text-primary cursor-pointer",
             onClick: openAddMemberDialog,
+          },
+          {
+            label: "Send System Message",
+            icon: <MessageSquare size={14} />,
+            colorClass: "bg-primary text-blue-400 hover:text-blue cursor-pointer",
+            onClick: () => {
+              setMessage("");
+              setSendMessageError("");
+              setOpenSendMessage(true);
+            },
           },
         ]}
         />
@@ -790,7 +834,6 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
         </Dialog>
 
         <Dialog open={open} onOpenChange={setOpen}>
-
           <DialogContent className="sm:max-w-md flex flex-col">
             <DialogHeader>
               <DialogTitle>Add Members</DialogTitle>
@@ -903,6 +946,57 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
             </DialogFooter>
           </DialogContent>
         </Dialog>        
+
+        <Dialog open={openSendMessage} onOpenChange={setOpenSendMessage}>
+          <DialogContent className="sm:max-w-md flex flex-col">
+            
+            <DialogHeader>
+              <DialogTitle>Send System Message</DialogTitle>
+              <DialogDescription>
+                Send a system message to this chat.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+
+              {/* Message */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Message *</Label>
+                  <textarea
+                    className="min-h-[100px] rounded-md border px-3 py-2 text-sm"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                  />
+              </div>
+
+              {/* Error */}
+              {sendMessageError && (
+                <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                  {sendMessageError}
+                </div>
+              )}
+
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setOpenSendMessage(false)}
+                disabled={messageSubmitting}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                onClick={handleSendMessage}
+                disabled={!message.trim() || messageSubmitting}
+              >
+                {messageSubmitting ? "Sending..." : "Send"}
+              </Button>
+            </DialogFooter>
+
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }

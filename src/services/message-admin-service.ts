@@ -1,5 +1,6 @@
 import apiClient from "@/lib/axios";
 import { API_ENDPOINTS } from "@/config/api";
+import type { TextMessageUserRequest } from "@/types/message.type";
 
 const MESSAGE_BASE_URL = `${API_ENDPOINTS.CHAT_SERVICE}/admin/message`;
 
@@ -42,6 +43,11 @@ export const messageAdminService = {
   // POST /admin/message
   send: (data: CreateMessageRequest) => {
     return apiClient.post(MESSAGE_BASE_URL, data);
+  },
+
+  // POST /admin/message/system
+  systemSend: (data: TextMessageUserRequest) => {
+    return apiClient.post(`${MESSAGE_BASE_URL}/system`, data);
   },
 
   // GET /admin/message/{messageId}
