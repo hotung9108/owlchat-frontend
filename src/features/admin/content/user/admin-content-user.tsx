@@ -35,7 +35,8 @@ import {
 import {
   User, Mail, Phone, Calendar, Shield, Users, UserPlus,
   Ban, MessageSquare, Clock, CheckCircle2, XCircle, AlertCircle,
-  Pencil, PowerOff, Power, Upload
+  Pencil, PowerOff, Power, Upload,
+  Plus
 } from "lucide-react"
 import { format } from "date-fns"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
@@ -135,7 +136,7 @@ function RequestStatusBadge({ status }: { status: FriendRequest["status"] }) {
 export default function AdminContentUser() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { updateStatus } = useAccountService()
+  const { updateStatus, updateRole } = useAccountService()
   {/* NEW HOOK */}
   const { fetchProfileById } = useUserProfile()
   const { remove: removeChatMember } = useMemberAdminService()
@@ -308,6 +309,10 @@ export default function AdminContentUser() {
   // Activate/deactivate confirm dialog
   const [toggleOpen, setToggleOpen]       = useState(false)
 
+  // Role dialog
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false)
+  const [selectedRole, setSelectedRole]     = useState<"ADMIN" | "USER">("USER")
+
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   const openEdit = () => {
@@ -359,6 +364,20 @@ export default function AdminContentUser() {
     }
   }
 
+  const handleUpdateRole = async () => {
+    try {
+      await updateRole(user.id, selectedRole)
+      setUser(prev => ({
+        ...prev,
+        role: selectedRole as any,
+        updated_date: new Date().toISOString(),
+      }))
+      setRoleDialogOpen(false)
+    } catch (err) {
+      console.error("Failed to update role", err)
+    }
+  }
+
   const [avatarError, setAvatarError] = useState("")
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -390,18 +409,28 @@ export default function AdminContentUser() {
         subtitle={id}
         buttons={[
           {
-            label: "Edit Profile",
-            icon: <Pencil size={13} />,
-            onClick: openEdit
-          },
-          {
             label: user.status ? "Deactivate" : "Activate",
             icon: user.status ? <PowerOff size={13} /> : <Power size={13} />,
             colorClass: user.status
               ? "border-destructive/40 text-destructive hover:bg-destructive/10"
               : "border-green-500/40 text-green-600 hover:bg-green-500/10 dark:text-green-400",
             onClick: () => setToggleOpen(true)
-          }
+          },
+          {
+            label: "Edit Profile",
+            icon: <Pencil size={13} />,
+            colorClass: "bg-primary text-primary hover:text-primary cursor-pointer",
+            onClick: openEdit
+          },
+          {
+            label: "Change Role",
+            icon: <Shield size={13} />,
+            colorClass: "bg-primary text-blue-400 hover:text-blue cursor-pointer",
+            onClick: () => {
+              setSelectedRole(user.role === "ADMIN" ? "ADMIN" : "USER")
+              setRoleDialogOpen(true)
+            }
+          },
         ]}
       />
 
@@ -838,6 +867,46 @@ export default function AdminContentUser() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Change Role Dialog ── */}
+      <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change User Role</DialogTitle>
+            <DialogDescription>
+              Update the administrative permissions for <strong>{user.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="grid gap-2">
+              <Label className="text-xs font-semibold">Select New Role</Label>
+              <Select
+                value={selectedRole}
+                onValueChange={(v) => setSelectedRole(v as "ADMIN" | "USER")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USER">USER</SelectItem>
+                  <SelectItem value="ADMIN">ADMIN</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-2">
+                {selectedRole === "ADMIN" 
+                  ? "ADMIN users have full access to management tools and dashboard features." 
+                  : "USER accounts have standard platform access without administrative privileges."}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateRole}>Update Role</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   )

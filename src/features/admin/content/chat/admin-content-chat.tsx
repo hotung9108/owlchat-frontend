@@ -18,16 +18,24 @@ import {
 import {
   MessageSquare, Users, Hash, Clock, User, Crown, Shield,
   CheckCheck, Check, Eye, Trash2, Power, PowerOff,
+  Pencil,
+  Plus
 } from "lucide-react"
 import { format } from "date-fns"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type ChatType       = "PRIVATE" | "GROUP"
 type MemberRole     = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER"
 type MessageState   = "ORIGIN" | "EDITED" | "REMOVED"
-type MessageType    = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "DOC"
+type MessageType    = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE"
 
 type Chat = {
   id: string
@@ -105,13 +113,23 @@ function RoleBadge({ role }: { role: MemberRole }) {
     </Badge>
   )
   if (role === "ADMIN") return (
-    <Badge variant="outline" className="text-xs gap-1 border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+    <Badge variant="outline" className="text-xs gap-1 border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400">
       <Shield size={10} /> Admin
+    </Badge>
+  )
+  if (role === "MEMBER") return (
+    <Badge variant="outline" className="text-xs gap-1 border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+      <User size={10} /> Member
+    </Badge>
+  )
+  if (role === "VIEWER") return (
+    <Badge variant="outline" className="text-xs gap-1 border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400">
+      <Eye size={10} /> Viewer
     </Badge>
   )
   return (
     <Badge variant="outline" className="text-xs gap-1 border-border bg-muted text-muted-foreground">
-      <User size={10} /> Member
+      <User size={10} /> Other
     </Badge>
   )
 }
@@ -126,7 +144,7 @@ function MessageTypeBadge({ type }: { type: MessageType }) {
   const map: Record<MessageType, string> = {
     TEXT: "border-border bg-muted text-muted-foreground",
     IMG: "border-purple-500/40 bg-purple-500/10 text-purple-600 dark:text-purple-400",
-    DOC: "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+   GENERIC_FILE: "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
     VID: "border-pink-500/40 bg-pink-500/10 text-pink-600 dark:text-pink-400",
     SYSTEM_MESSAGE: "border-cyan-500/40 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
   }
@@ -139,8 +157,15 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { chatDetail, fetchChatById, updateStatus, loading } = useChatAdminService()
-    const { members: rawMembers, fetchMembersByChat, loading: membersLoading } = useMemberAdminService()
-    const { messages: rawMessages, fetchByChat, loading: messagesLoading } = useMessageService()
+    const { 
+      members: rawMembers, 
+      fetchMembersByChat, 
+      loading: membersLoading,
+      update: updateMemberApi,
+      remove: removeMemberApi,
+      create: createMemberApi
+    } = useMemberAdminService()
+    const { messages: rawMessages, fetchByChat, systemSend: sendMessageApi, loading: messagesLoading } = useMessageService()
     const { profiles: rawUsers, fetchProfiles } = useUserProfile()
 
     const [chat, setChat] = useState<Chat | null>(null)
@@ -197,19 +222,17 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
 
     // Map raw members API response to local type
     useEffect(() => {
-      if (rawMembers.length > 0) {
-        setMembers(rawMembers.map((m: any) => ({
-          member_id: m.memberId || m.member_id,
-          member_name: m.memberName || m.member_name || "Unknown",
-          member_avatar: m.memberAvatar || m.member_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.memberId || m.member_id}`,
-          chat_id: m.chatId || m.chat_id,
-          role: m.role,
-          nickname: m.nickname ?? null,
-          inviter_id: m.inviterId || m.inviter_id || null,
-          inviter_name: m.inviterName || m.inviter_name || null,
-          join_date: m.joinDate || m.join_date,
-        })))
-      }
+      setMembers(rawMembers.map((m: any) => ({
+        member_id: m.memberId || m.member_id,
+        member_name: m.memberName || m.member_name || "Unknown",
+        member_avatar: m.memberAvatar || m.member_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.memberId || m.member_id}`,
+        chat_id: m.chatId || m.chat_id,
+        role: m.role,
+        nickname: m.nickname ?? null,
+        inviter_id: m.inviterId || m.inviter_id || null,
+        inviter_name: m.inviterName || m.inviter_name || null,
+        join_date: m.joinDate || m.join_date,
+      })))
     }, [rawMembers])
 
     // Map raw messages API response to local type
@@ -256,6 +279,190 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
 
     }))
 
+    const refreshMembers = async () => {
+      if (id) await fetchMembersByChat(id);
+    };
+
+    const [selectedMember, setSelectedMember] = useState<{
+      memberId: string;
+      chatId: string;
+    } | null>(null);
+
+    const [form, setForm] = useState({
+      role: "MEMBER" as MemberRole,
+      nickname: "",
+    });
+
+    const [openChatMemberEdit, setOpenChatMemberEdit] = useState(false);
+
+    const openMemberDialog = (m: any) => {
+      setSelectedMember({
+        memberId: m.member_id,
+        chatId: m.chat_id,
+      });
+
+      setForm({
+        role: m.role,
+        nickname: m.nickname || "",
+      });
+
+      setOpenChatMemberEdit(true);
+    };
+
+    const handleKickMember = async () => {
+      if (!selectedMember) return;
+
+      try {
+        await removeMemberApi(
+          selectedMember.memberId,
+          selectedMember.chatId
+        );
+
+        setOpenChatMemberEdit(false);
+        
+        await refreshMembers();
+
+      } catch (err) {
+        alert(err)
+        console.error(err);
+      }
+    };
+
+    const handleUpdateMember = async () => {
+      if (!selectedMember) return;
+
+      try {
+        await updateMemberApi(
+          selectedMember.memberId,
+          selectedMember.chatId,
+          {
+            role: form.role as any,
+            nickname: form.nickname,
+            memberId: selectedMember.memberId,
+            chatId: selectedMember.chatId
+          }
+        );
+
+        setOpenChatMemberEdit(false);
+        await refreshMembers();
+
+      } catch (err) {
+        alert(err)
+        console.error(err);
+      }
+    };
+
+    const [open, setOpen] = useState(false);
+
+    const [userInput, setUserInput] = useState("");
+    const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+
+    const [shared, setShared] = useState({
+      role: "MEMBER" as MemberRole,
+      nickname: "",
+      inviterId: "",
+    });
+
+    const [error, setError] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+
+    const openAddMemberDialog = () => {
+      setSelectedUsers([]);
+      setUserInput("");
+      setShared({ role: "MEMBER", nickname: "", inviterId: "" });
+      setError("");
+      setOpen(true);
+    };
+
+    const handleAddUser = () => {
+      const userId = userInput.trim();
+      if (!userId) return;
+
+      const chatType = chat?.type ?? "GROUP";
+      const limit = chatType === "PRIVATE" ? 2 : 100;
+
+      if (members.length + selectedUsers.length >= limit) {
+        setError(`Member limit reached (${limit})`);
+        return;
+      }
+
+      // Prevent adding someone already in the chat
+      if (members.some((m) => m.member_id === userId)) {
+        setError("User is already a member of this chat");
+        return;
+      }
+
+      if (selectedUsers.includes(userId)) return;
+
+      setSelectedUsers((prev) => [...prev, userId]);
+      setUserInput("");
+      setError("");
+    };
+
+    const handleRemoveUser = (id: string) => {
+      setSelectedUsers((prev) => prev.filter((u) => u !== id));
+    };
+
+    const handleSubmit = async () => {
+      if (!id) return;
+      setSubmitting(true);
+      try {
+        for (const userId of selectedUsers) {
+          await createMemberApi({
+            memberId: userId,
+            chatId: id,
+            role: shared.role,
+            nickname: shared.nickname || undefined,
+            inviterId: shared.inviterId || undefined,
+          });
+        }
+
+        setOpen(false);
+        setSelectedUsers([]);
+        await refreshMembers();
+      } catch (err) {
+        console.error(err);
+        setError("Failed to add members");
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
+    const [openSendMessage, setOpenSendMessage] = useState(false);
+
+    const [message, setMessage] = useState("");
+    const [messageSubmitting, setMessageSubmitting] = useState(false);
+    const [sendMessageError, setSendMessageError] = useState("");
+
+    const handleSendMessage = async () => {
+      if (!message.trim()) return;
+
+      try {
+        setMessageSubmitting(true);
+        setSendMessageError("");
+
+        await sendMessageApi({
+          chatId: id!,
+          content: message.trim()
+        });
+
+        setMessage("");
+        setOpenSendMessage(false);
+
+        await refreshMessages(); // reload messages
+
+      } catch (err) {
+        console.error(err);
+        setSendMessageError("Failed to send message");
+      } finally {
+        setMessageSubmitting(false);
+      }
+    };
+
+    const refreshMessages = async () => {
+      if (id) await fetchByChat(id);
+    };
+
     if (loading || !chat) {
       return <div className="flex items-center justify-center h-full w-full bg-background"><span className="text-muted-foreground">Loading chat details...</span></div>
     }
@@ -279,7 +486,23 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
               updateStatus(chat.id, !chat.status);
               setChat(prev => prev ? ({ ...prev, status: !prev.status }) : null)
             }
-          }
+          },
+          {
+            label: "Add Member",
+            icon: <Plus size={14} />,
+            colorClass: "bg-primary text-primary hover:text-primary cursor-pointer",
+            onClick: openAddMemberDialog,
+          },
+          {
+            label: "Send System Message",
+            icon: <MessageSquare size={14} />,
+            colorClass: "bg-primary text-blue-400 hover:text-blue cursor-pointer",
+            onClick: () => {
+              setMessage("");
+              setSendMessageError("");
+              setOpenSendMessage(true);
+            },
+          },
         ]}
         />
 
@@ -344,7 +567,7 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
               <Table className="min-w-max">
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
-                    {["Member", "Role", "Nickname", "Inviter", "Join Date"].map(h => (
+                    {["Member", "Role", "Nickname", "Inviter", "Join Date", "Actions"].map(h => (
                       <TableHead key={h} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 whitespace-nowrap">{h}</TableHead>
                     ))}
                   </TableRow>
@@ -365,17 +588,42 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                     const inviterProfile = m.inviter_id ? usersById[m.inviter_id] : null
                     const inviterName   = inviterProfile?.name  || m.inviter_name
                     return (
-                    <TableRow key={m.member_id} onClick={() => navigate(`/admin/user/${m.member_id}`)} className={`border-b border-border hover:bg-accent transition-colors cursor-pointer ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
+                    <TableRow
+                      key={m.member_id}
+                      className={`
+                        border-b border-border hover:bg-accent transition-colors cursor-pointer
+                        ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}
+                      `}
+                      onClick={() => {navigate(`/admin/user/${m.member_id}`);}}
+                    >
                       {/* Member */}
                       <TableCell className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
+                        <div
+                          // onClick={(e) => {
+                          // }}
+                          role="button"
+                          tabIndex={0}
+                          // onKeyDown={(e) => {
+                          //   if (e.key === "Enter") {
+                          //     navigate(`/admin/user/${m.member_id}`);
+                          //   }
+                          // }}
+                          className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition"
+                        >
                           <Avatar className="w-7 h-7 border border-border shrink-0">
                             <AvatarImage src={displayAvatar} />
-                            <AvatarFallback className="text-xs bg-muted">{displayName?.[0] ?? '?'}</AvatarFallback>
+                            <AvatarFallback className="text-xs bg-muted">
+                              {displayName?.[0] ?? "?"}
+                            </AvatarFallback>
                           </Avatar>
+
                           <div>
-                            <p className="text-xs font-medium text-foreground whitespace-nowrap">{displayName}</p>
-                            <p className="text-xs text-muted-foreground font-mono">{m.member_id}</p>
+                            <p className="text-xs font-medium text-foreground whitespace-nowrap">
+                              {displayName}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-mono">
+                              {m.member_id}
+                            </p>
                           </div>
                         </div>
                       </TableCell>
@@ -397,6 +645,21 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                       {/* Join date */}
                       <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                         {m.join_date ? format(new Date(m.join_date), "dd MMM yyyy, HH:mm") : "—"}
+                      </TableCell>
+                      {/* Actions */}
+                      <TableCell className="px-4 py-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 hover:bg-muted text-primary hover:text-primary/60 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation(); // ✅ prevent row click
+                            openMemberDialog(m)
+                          }}
+                        >
+                          <Pencil size={14} className="" />
+                          <p className="">Edit</p>
+                        </Button>
                       </TableCell>
                     </TableRow>
                     )
@@ -495,6 +758,245 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
           </TabsContent>
         </Tabs>
 
+        <Dialog open={openChatMemberEdit} onOpenChange={setOpenChatMemberEdit}>
+          <DialogContent className="max-w-md flex flex-col">
+
+            <DialogHeader>
+              <DialogTitle>Manage Member</DialogTitle>
+              <DialogDescription>
+                Update role, nickname or remove member from chat.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+
+              {/* Role */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Role</Label>
+
+                <Select
+                  value={form.role}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, role: v as MemberRole }))
+                  }
+                >
+                  <SelectTrigger className="text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    <SelectItem value="OWNER">Owner</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    <SelectItem value="MEMBER">Member</SelectItem>
+                    <SelectItem value="VIEWER">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Nickname */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Nickname</Label>
+                <Input
+                  value={form.nickname}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, nickname: e.target.value }))
+                  }
+                  placeholder="Optional nickname"
+                />
+              </div>
+
+            </div>
+
+            <DialogFooter className="flex justify-between border-t pt-3">
+
+              {/* Left: Kick button */}
+              <Button
+                variant="destructive"
+                onClick={handleKickMember}
+              >
+                Kick out
+              </Button>
+
+              {/* Right: actions */}
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setOpenChatMemberEdit(false)}>
+                  Cancel
+                </Button>
+
+                <Button onClick={handleUpdateMember}>
+                  Save
+                </Button>
+              </div>
+
+            </DialogFooter>
+
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="sm:max-w-md flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Add Members</DialogTitle>
+              <DialogDescription>
+                Add users to this chat. Max {chat?.type === "PRIVATE" ? 2 : 100} members.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+
+              {/* Shared Role */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Role *</Label>
+                <Select
+                  value={shared.role}
+                  onValueChange={(v) =>
+                    setShared((s) => ({ ...s, role: v as MemberRole }))
+                  }
+                >
+                  <SelectTrigger className="text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="OWNER">Owner</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    <SelectItem value="MEMBER">Member</SelectItem>
+                    <SelectItem value="VIEWER">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Shared Nickname */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Nickname</Label>
+                <Input
+                  value={shared.nickname}
+                  onChange={(e) =>
+                    setShared((s) => ({ ...s, nickname: e.target.value }))
+                  }
+                  placeholder="Optional nickname"
+                />
+              </div>
+
+              {/* Shared Inviter */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Inviter ID</Label>
+                <Input
+                  value={shared.inviterId}
+                  onChange={(e) =>
+                    setShared((s) => ({ ...s, inviterId: e.target.value }))
+                  }
+                  placeholder="Optional inviter"
+                />
+              </div>
+
+              {/* User input */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Add User ID</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    placeholder="Enter user id"
+                  />
+                  <Button onClick={handleAddUser}>Add</Button>
+                </div>
+              </div>
+
+              {/* Selected users */}
+              <ScrollArea className="border rounded-md p-3 h-48">
+                <div className="space-y-2">
+                  {selectedUsers.map((u) => (
+                    <div
+                      key={u}
+                      className="flex items-center justify-between p-2 bg-muted/40 rounded"
+                    >
+                      <span className="text-xs font-mono">{u}</span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleRemoveUser(u)}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {/* Error */}
+              {error && (
+                <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                  {error}
+                </div>
+              )}
+
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+
+              <Button
+                onClick={handleSubmit}
+                disabled={selectedUsers.length === 0 || submitting}
+              >
+                {submitting ? "Adding..." : "Add Members"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>        
+
+        <Dialog open={openSendMessage} onOpenChange={setOpenSendMessage}>
+          <DialogContent className="sm:max-w-md flex flex-col">
+            
+            <DialogHeader>
+              <DialogTitle>Send System Message</DialogTitle>
+              <DialogDescription>
+                Send a system message to this chat.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+
+              {/* Message */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Message *</Label>
+                  <textarea
+                    className="min-h-[100px] rounded-md border px-3 py-2 text-sm"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                  />
+              </div>
+
+              {/* Error */}
+              {sendMessageError && (
+                <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                  {sendMessageError}
+                </div>
+              )}
+
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setOpenSendMessage(false)}
+                disabled={messageSubmitting}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                onClick={handleSendMessage}
+                disabled={!message.trim() || messageSubmitting}
+              >
+                {messageSubmitting ? "Sending..." : "Send"}
+              </Button>
+            </DialogFooter>
+
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }
