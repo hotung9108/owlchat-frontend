@@ -37,7 +37,7 @@ export default function ConversationDetailPage() {
     
     const { subscribeToTopic, isConnected } = useWebSocket();
     
-    const { profile, fetchUserProfile } = useUserProfile();
+    const { profile, fetchUserProfile, fetchProfileById } = useUserProfile();
     const { getChatByChatId } = useChatUser();
     const { getChatMembersByChatId } = useChatMemberUser();
 
@@ -53,37 +53,68 @@ export default function ConversationDetailPage() {
         const initChatContext = async () => {
             try {
                 const chat = await getChatByChatId(null, null, conversationId);
+                console.log("[Chat] Chat metadata:", { id: chat?.id, type: chat?.type, name: chat?.name });
                 
                 if (chat.type === "PRIVATE") {
-                    const membersResp = await getChatMembersByChatId(null, null, conversationId);
-                    const members = membersResp.content || membersResp; // Handle potential page object
-                    
-                    if (Array.isArray(members)) {
-                        // Find the member who is NOT me
-                        const otherMember = members.find(m => {
-                            const mId = m.memberId ?? m.userId ?? m.id;
-                            return mId && mId !== profile?.id;
-                        });
+                    try {
+                        const membersResp = await getChatMembersByChatId(null, null, conversationId);
+                        console.log("[Chat] Members response:", membersResp);
                         
-                        if (otherMember) {
-                            setChatMetadata({
-                                name: otherMember.nickname || otherMember.memberName || chat.name,
-                                avatar: otherMember.memberAvatar || chat.avatar,
-                                isOnline: true, 
-                            });
-                            return;
+                        // Safely extract members array
+                        let members: any[] = [];
+                        if (Array.isArray(membersResp)) {
+                            members = membersResp;
+                        } else if (membersResp?.content && Array.isArray(membersResp.content)) {
+                            members = membersResp.content;
                         }
+                        
+                        console.log("[Chat] Parsed members:", members);
+                        
+                        if (Array.isArray(members) && members.length > 0) {
+                            // Find the member who is NOT me
+                            const otherMember = members.find(m => {
+                                const mId = m.memberId ?? m.userId ?? m.id;
+                                console.log(`[Chat] Checking member mId=${mId} vs profile=${profile?.id}`);
+                                return mId && mId !== profile?.id;
+                            });
+                            
+                            console.log("[Chat] Other member found:", otherMember);
+                            
+                            if (otherMember) {
+                                const otherUserId = otherMember.memberId || otherMember.userId || otherMember.id;
+                                console.log("[Chat] Fetching profile for userId:", otherUserId);
+                                
+                                // Fetch the actual profile of the other user
+                                const otherUserProfile = await fetchProfileById(otherUserId);
+                                console.log("[Chat] Fetched profile:", otherUserProfile);
+                                
+                                if (otherUserProfile?.name) {
+                                    setChatMetadata({
+                                        name: otherUserProfile.name,
+                                        avatar: otherUserProfile.avatar || chat.avatar,
+                                        isOnline: true, 
+                                    });
+                                    console.log("[Chat] ✓ Set profile name:", otherUserProfile.name);
+                                    return;
+                                }
+                            }
+                        }
+                        
+                        console.warn("[Chat] ⚠️ Could not fetch PRIVATE chat member profile");
+                    } catch (memberErr) {
+                        console.error("[Chat] ❌ Error fetching members:", memberErr);
                     }
                 }
                 
                 // Fallback to chat defaults (Group chat uses chat name)
                 setChatMetadata({
-                    name: chat.name,
+                    name: chat.name || "Chat",
                     avatar: chat.avatar,
                     isOnline: chat.status,
                 });
+                console.log("[Chat] Set fallback name:", chat.name || "Chat");
             } catch (err) {
-                console.error("Failed to fetch chat context:", err);
+                console.error("[Chat] ❌ Failed to fetch chat context:", err);
                 setChatMetadata({ name: "Chat" });
             }
         };
@@ -91,7 +122,7 @@ export default function ConversationDetailPage() {
         if (profile?.id) {
             initChatContext();
         }
-    }, [conversationId, profile?.id, getChatByChatId, getChatMembersByChatId]);
+    }, [conversationId, profile?.id, getChatByChatId, getChatMembersByChatId, fetchProfileById]);
 
     // 3. Pagination & Initial Messages
     const fetchMessages = useCallback(async (targetPage: number) => {
@@ -114,31 +145,56 @@ export default function ConversationDetailPage() {
         }
     }, [conversationId, getMessagesByChatId]);
 
-    // Subscribe to WebSocket for real-time messages
+    // Subscribe to WebSocket for real-time messages - Setup once per conversation
     useEffect(() => {
-        if (!conversationId || !isConnected) return;
+        if (!conversationId) return;
         
-        const destination = `/topic/chat.${conversationId}`;
-        const subscription = subscribeToTopic(destination, (notification: any) => {
-            console.log("New real-time message notification:", notification);
-            // Re-fetch page 0 to instantly show new messages/edits/deletes
-            const size = 20;
-            getMessagesByChatId(
-                null,
-                null,
-                conversationId,
-                "",
-                0,
-                size,
-            ).catch((error) => console.debug("Real-time refresh messages error:", error));
-        });
+        let subscription: any = null;
+        let retryCount = 0;
+        const maxRetries = 5;
+        
+        const setupSubscription = () => {
+            const destination = `/topic/chat.${conversationId}`;
+            subscription = subscribeToTopic(destination, (notification: any) => {
+                console.log("New real-time message notification:", notification);
+                // Re-fetch page 0 to instantly show new messages/edits/deletes
+                const size = 20;
+                getMessagesByChatId(
+                    null,
+                    null,
+                    conversationId,
+                    "",
+                    0,
+                    size,
+                ).catch((error) => console.debug("Real-time refresh messages error:", error));
+            });
+            
+            console.log("WebSocket subscription setup for:", destination);
+        };
+
+        // Try to setup subscription, with retry if not connected yet
+        const attemptSubscription = () => {
+            if (retryCount < maxRetries) {
+                try {
+                    setupSubscription();
+                    retryCount = 0;
+                } catch (error) {
+                    console.warn("Failed to setup subscription, retrying...", error);
+                    retryCount++;
+                    setTimeout(attemptSubscription, 1000); // Retry after 1 second
+                }
+            }
+        };
+
+        attemptSubscription();
 
         return () => {
             if (subscription) {
                 subscription.unsubscribe();
+                console.log("WebSocket subscription unsubscribed");
             }
         };
-    }, [conversationId, isConnected, subscribeToTopic, getMessagesByChatId]);
+    }, [conversationId, subscribeToTopic, getMessagesByChatId]);
 
     // Reset pagination on chat change
     useEffect(() => {

@@ -4,6 +4,9 @@ import RegisterPage from "@/features/auth/pages/register-page";
 import ConversationPage from "@/features/user/conversation/conversation-page";
 import ConversationDetailPage from "@/features/user/conversation/conversation-detail-page";
 import FriendPage from "@/features/user/friend/friend-page";
+import GroupPage from "@/features/user/coming-soon/group-page";
+import MarketplacePage from "@/features/user/coming-soon/marketplace-page";
+import FindsPage from "@/features/user/coming-soon/finds-page";
 import AdminPage from "@/features/admin/pages/admin-page";
 import AdminContentFallback from "@/features/admin/content/admin-content-fallback";
 
@@ -27,6 +30,9 @@ const AppRoutes = () => {
                 element={<ConversationDetailPage />}
             />
             <Route path="/friends" element={<FriendPage />} />
+            <Route path="/groups" element={<GroupPage />} />
+            <Route path="/marketplace" element={<MarketplacePage />} />
+            <Route path="/finds" element={<FindsPage />} />
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="/login" element={<LoginPage />} />
             {/* <Route path="/admin/login" element={<AdminLoginPage />} /> */}

@@ -9,15 +9,22 @@ type FriendCardProps = {
 };
 
 export default function FriendCard({ friendId }: FriendCardProps) {
-    const { profile, fetchProfileById, fetchAvatar, loading, error } = useUserProfile();
+    const { fetchProfileById, fetchAvatar, loading, error } = useUserProfile();
+    const [friendProfile, setFriendProfile] = useState<any>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
     useEffect(() => {
-        fetchProfileById(friendId);
+        const loadFriendProfile = async () => {
+            const data = await fetchProfileById(friendId);
+            if (data) {
+                setFriendProfile(data);
+            }
+        };
+        loadFriendProfile();
     }, [friendId, fetchProfileById]);
 
     useEffect(() => {
-        if (profile?.avatar) {
+        if (friendProfile?.avatar) {
             fetchAvatar(friendId)
                 .then(blob => {
                     if (blob && blob.size > 0) {
@@ -26,7 +33,7 @@ export default function FriendCard({ friendId }: FriendCardProps) {
                 })
                 .catch(err => console.error("Error fetching avatar:", err));
         }
-    }, [profile?.avatar, friendId, fetchAvatar]);
+    }, [friendProfile?.avatar, friendId, fetchAvatar]);
 
     useEffect(() => {
         return () => {
@@ -44,7 +51,7 @@ export default function FriendCard({ friendId }: FriendCardProps) {
                     {avatarUrl ? (
                         <img
                             src={avatarUrl}
-                            alt={`${profile?.name || 'Friend'}'s profile`}
+                            alt={`${friendProfile?.name || 'Friend'}'s profile`}
                             className="w-full h-full object-cover"
                         />
                     ) : (
@@ -56,18 +63,18 @@ export default function FriendCard({ friendId }: FriendCardProps) {
 
                 <div>
                     <h3 className="text-lg font-bold text-primary">
-                        {profile?.name || "Unknown"}
+                        {friendProfile?.name || "Unknown"}
                     </h3>
-                    <p className="text-sm text-muted-foreground">{profile?.email || "No email"}</p>
+                    <p className="text-sm text-muted-foreground">{friendProfile?.email || "No email"}</p>
                     <p className="text-sm text-muted-foreground">
-                        {profile?.gender === true
+                        {friendProfile?.gender === true
                             ? "Male"
-                            : profile?.gender === false
+                            : friendProfile?.gender === false
                               ? "Female"
                               : "Unknown"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                        {profile?.phoneNumber || "No phone number"}
+                        {friendProfile?.phoneNumber || "No phone number"}
                     </p>
                 </div>
             </div>

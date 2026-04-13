@@ -1,12 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User } from "lucide-react";
+import { User, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFriend } from "@/hooks/use-friend";
 import { useUserProfile } from "@/hooks/use-user-profile";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import type { UserProfile } from "@/types/user-profile.type";
-import ErrorLogo from "@/components/shared/error-logo";
 import LoadingLogo from "@/components/shared/loading-logo";
 
 const DiscoveryFriendCard = ({
@@ -86,32 +85,76 @@ const DiscoveryFriendCard = ({
     );
 };
 
-type Props = {};
+const ITEMS_PER_PAGE = 12;
 
-export default function FriendDiscoveryFriendPage(props: Props) {
+export default function FriendDiscoveryFriendPage() {
     const {
-        profiles,
+        profiles: allProfiles,
         profile,
-        fetchProfiles,
+        fetchAllProfiles,
         fetchUserProfile,
         loading: profilesLoading,
-        error: profilesError,
     } = useUserProfile();
     const {
         postFriendRequest,
         loading: friendLoading,
-        error: friendError,
     } = useFriend();
 
     const [searchTerm, setSearchTerm] = useState("");
+    const [currentPageIndex, setCurrentPageIndex] = useState(0);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+    // Load all profiles on mount
     useEffect(() => {
-        fetchProfiles();
+        fetchAllProfiles();
         fetchUserProfile();
     }, []);
     
-    // handle add friend
+    // Filter profiles based on search term and exclude current user
+    const filteredProfiles = useMemo(() => {
+        return allProfiles.filter(
+            (p) =>
+                p.id !== profile?.id &&
+                p.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [allProfiles, profile?.id, searchTerm]);
+
+    // Calculate pagination
+    const totalPages = Math.ceil(filteredProfiles.length / ITEMS_PER_PAGE);
+    
+    // Get current page items
+    const currentPageProfiles = useMemo(() => {
+        const startIndex = currentPageIndex * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return filteredProfiles.slice(startIndex, endIndex);
+    }, [filteredProfiles, currentPageIndex]);
+
+    // Handle search
+    const handleSearch = useCallback((keywords: string) => {
+        setSearchTerm(keywords);
+        setCurrentPageIndex(0); // Reset to first page
+    }, []);
+
+    // Handle pagination - next page
+    const handleNextPage = useCallback(() => {
+        if (currentPageIndex < totalPages - 1) {
+            setCurrentPageIndex(currentPageIndex + 1);
+        }
+    }, [currentPageIndex, totalPages]);
+
+    // Handle pagination - previous page
+    const handlePrevPage = useCallback(() => {
+        if (currentPageIndex > 0) {
+            setCurrentPageIndex(currentPageIndex - 1);
+        }
+    }, [currentPageIndex]);
+
+    // Handle direct page click
+    const handlePageClick = useCallback((pageNum: number) => {
+        setCurrentPageIndex(pageNum);
+    }, []);
+    
+    // Handle add friend
     const handleAddFriend = async (userId: string) => {
         try {
             await postFriendRequest(null, null, { receiverId: userId });
@@ -121,11 +164,6 @@ export default function FriendDiscoveryFriendPage(props: Props) {
             setTimeout(() => setErrorMessage(null), 3000);
         }
     };
-    const filteredProfiles = profiles.filter(
-        (p) =>
-            p.id !== profile?.id &&
-            p.name.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
     
     return (
         <>
@@ -135,21 +173,90 @@ export default function FriendDiscoveryFriendPage(props: Props) {
                     className="w-full"
                     type="text"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearch(e.target.value)}
                 />
             </div>
+
             {profilesLoading || friendLoading ? (
-                <p>Loading...</p>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {filteredProfiles.map((p) => (
-                        <DiscoveryFriendCard
-                            key={p.id}
-                            profile={p}
-                            onAddFriend={handleAddFriend}
-                        />
-                    ))}
+                <div className="flex items-center justify-center py-12">
+                    <LoadingLogo />
                 </div>
+            ) : currentPageProfiles.length === 0 ? (
+                <div className="flex items-center justify-center py-12">
+                    <p className="text-muted-foreground">
+                        {searchTerm ? "No users found matching your search" : "No users found"}
+                    </p>
+                </div>
+            ) : (
+                <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        {currentPageProfiles.map((p) => (
+                            <DiscoveryFriendCard
+                                key={p.id}
+                                profile={p}
+                                onAddFriend={handleAddFriend}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between mt-8 py-4">
+                            <div className="text-sm text-muted-foreground">
+                                Page {currentPageIndex + 1} of {totalPages} 
+                                {filteredProfiles.length > 0 && ` • ${filteredProfiles.length} total users`}
+                            </div>
+
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handlePrevPage}
+                                    disabled={currentPageIndex === 0}
+                                    className="gap-1"
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                    Previous
+                                </Button>
+
+                                <div className="flex items-center gap-2 px-4">
+                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                        const pageNum = Math.max(0, currentPageIndex - 2) + i;
+                                        if (pageNum >= totalPages) return null;
+                                        
+                                        return (
+                                            <Button
+                                                key={pageNum}
+                                                variant={pageNum === currentPageIndex ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => handlePageClick(pageNum)}
+                                            >
+                                                {pageNum + 1}
+                                            </Button>
+                                        );
+                                    })}
+                                </div>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleNextPage}
+                                    disabled={currentPageIndex >= totalPages - 1}
+                                    className="gap-1"
+                                >
+                                    Next
+                                    <ChevronRight className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {errorMessage && (
+                        <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md">
+                            {errorMessage}
+                        </div>
+                    )}
+                </>
             )}
         </>
     );
