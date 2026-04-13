@@ -18,16 +18,22 @@ import {
 import {
   MessageSquare, Users, Hash, Clock, User, Crown, Shield,
   CheckCheck, Check, Eye, Trash2, Power, PowerOff,
+  Pencil
 } from "lucide-react"
 import { format } from "date-fns"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type ChatType       = "PRIVATE" | "GROUP"
 type MemberRole     = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER"
 type MessageState   = "ORIGIN" | "EDITED" | "REMOVED"
-type MessageType    = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "DOC"
+type MessageType    = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE"
 
 type Chat = {
   id: string
@@ -70,6 +76,8 @@ type Message = {
   created_date: string
 }
 
+type ChatMemberRole = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER";
+
 // ── Exposed methods via ref ───────────────────────────────────────────────────
 
 export type ChatDetailHandle = {
@@ -105,13 +113,23 @@ function RoleBadge({ role }: { role: MemberRole }) {
     </Badge>
   )
   if (role === "ADMIN") return (
-    <Badge variant="outline" className="text-xs gap-1 border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+    <Badge variant="outline" className="text-xs gap-1 border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400">
       <Shield size={10} /> Admin
+    </Badge>
+  )
+  if (role === "MEMBER") return (
+    <Badge variant="outline" className="text-xs gap-1 border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+      <User size={10} /> Member
+    </Badge>
+  )
+  if (role === "VIEWER") return (
+    <Badge variant="outline" className="text-xs gap-1 border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400">
+      <Eye size={10} /> Viewer
     </Badge>
   )
   return (
     <Badge variant="outline" className="text-xs gap-1 border-border bg-muted text-muted-foreground">
-      <User size={10} /> Member
+      <User size={10} /> Other
     </Badge>
   )
 }
@@ -126,7 +144,7 @@ function MessageTypeBadge({ type }: { type: MessageType }) {
   const map: Record<MessageType, string> = {
     TEXT: "border-border bg-muted text-muted-foreground",
     IMG: "border-purple-500/40 bg-purple-500/10 text-purple-600 dark:text-purple-400",
-    DOC: "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+   GENERIC_FILE: "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
     VID: "border-pink-500/40 bg-pink-500/10 text-pink-600 dark:text-pink-400",
     SYSTEM_MESSAGE: "border-cyan-500/40 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
   }
@@ -139,7 +157,13 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { chatDetail, fetchChatById, updateStatus, loading } = useChatAdminService()
-    const { members: rawMembers, fetchMembersByChat, loading: membersLoading } = useMemberAdminService()
+    const { 
+      members: rawMembers, 
+      fetchMembersByChat, 
+      loading: membersLoading,
+      update: updateMemberApi,
+      remove: removeMemberApi
+    } = useMemberAdminService()
     const { messages: rawMessages, fetchByChat, loading: messagesLoading } = useMessageService()
     const { profiles: rawUsers, fetchProfiles } = useUserProfile()
 
@@ -256,6 +280,78 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
 
     }))
 
+    const refreshMembers = async () => {
+      if (id) await fetchMembersByChat(id);
+    };
+
+    const [selectedMember, setSelectedMember] = useState<{
+      memberId: string;
+      chatId: string;
+    } | null>(null);
+
+    const [form, setForm] = useState({
+      role: "MEMBER" as ChatMemberRole,
+      nickname: "",
+    });
+
+    const [openChatMemberEdit, setOpenChatMemberEdit] = useState(false);
+
+    const openMemberDialog = (m: any) => {
+      setSelectedMember({
+        memberId: m.member_id,
+        chatId: m.chat_id,
+      });
+
+      setForm({
+        role: m.role,
+        nickname: m.nickname || "",
+      });
+
+      setOpenChatMemberEdit(true);
+    };
+
+    const handleKickMember = async () => {
+      if (!selectedMember) return;
+
+      try {
+        await removeMemberApi(
+          selectedMember.memberId,
+          selectedMember.chatId
+        );
+
+        setOpenChatMemberEdit(false);
+        await refreshMembers();
+
+      } catch (err) {
+        alert(err)
+        console.error(err);
+      }
+    };
+
+    const handleUpdateMember = async () => {
+      if (!selectedMember) return;
+
+      try {
+        await updateMemberApi(
+          selectedMember.memberId,
+          selectedMember.chatId,
+          {
+            role: form.role as any,
+            nickname: form.nickname,
+            memberId: selectedMember.memberId,
+            chatId: selectedMember.chatId
+          }
+        );
+
+        setOpenChatMemberEdit(false);
+        await refreshMembers();
+
+      } catch (err) {
+        alert(err)
+        console.error(err);
+      }
+    };
+
     if (loading || !chat) {
       return <div className="flex items-center justify-center h-full w-full bg-background"><span className="text-muted-foreground">Loading chat details...</span></div>
     }
@@ -344,7 +440,7 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
               <Table className="min-w-max">
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
-                    {["Member", "Role", "Nickname", "Inviter", "Join Date"].map(h => (
+                    {["Member", "Role", "Nickname", "Inviter", "Join Date", "Actions"].map(h => (
                       <TableHead key={h} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 whitespace-nowrap">{h}</TableHead>
                     ))}
                   </TableRow>
@@ -365,17 +461,42 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                     const inviterProfile = m.inviter_id ? usersById[m.inviter_id] : null
                     const inviterName   = inviterProfile?.name  || m.inviter_name
                     return (
-                    <TableRow key={m.member_id} onClick={() => navigate(`/admin/user/${m.member_id}`)} className={`border-b border-border hover:bg-accent transition-colors cursor-pointer ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
+                    <TableRow
+                      key={m.member_id}
+                      className={`
+                        border-b border-border hover:bg-accent transition-colors cursor-pointer
+                        ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}
+                      `}
+                      onClick={() => {navigate(`/admin/user/${m.member_id}`);}}
+                    >
                       {/* Member */}
                       <TableCell className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
+                        <div
+                          // onClick={(e) => {
+                          // }}
+                          role="button"
+                          tabIndex={0}
+                          // onKeyDown={(e) => {
+                          //   if (e.key === "Enter") {
+                          //     navigate(`/admin/user/${m.member_id}`);
+                          //   }
+                          // }}
+                          className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition"
+                        >
                           <Avatar className="w-7 h-7 border border-border shrink-0">
                             <AvatarImage src={displayAvatar} />
-                            <AvatarFallback className="text-xs bg-muted">{displayName?.[0] ?? '?'}</AvatarFallback>
+                            <AvatarFallback className="text-xs bg-muted">
+                              {displayName?.[0] ?? "?"}
+                            </AvatarFallback>
                           </Avatar>
+
                           <div>
-                            <p className="text-xs font-medium text-foreground whitespace-nowrap">{displayName}</p>
-                            <p className="text-xs text-muted-foreground font-mono">{m.member_id}</p>
+                            <p className="text-xs font-medium text-foreground whitespace-nowrap">
+                              {displayName}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-mono">
+                              {m.member_id}
+                            </p>
                           </div>
                         </div>
                       </TableCell>
@@ -397,6 +518,21 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                       {/* Join date */}
                       <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                         {m.join_date ? format(new Date(m.join_date), "dd MMM yyyy, HH:mm") : "—"}
+                      </TableCell>
+                      {/* Actions */}
+                      <TableCell className="px-4 py-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 hover:bg-muted text-primary hover:text-primary/60 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation(); // ✅ prevent row click
+                            openMemberDialog(m)
+                          }}
+                        >
+                          <Pencil size={14} className="" />
+                          <p className="">Edit</p>
+                        </Button>
                       </TableCell>
                     </TableRow>
                     )
@@ -495,6 +631,80 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
           </TabsContent>
         </Tabs>
 
+        <Dialog open={openChatMemberEdit} onOpenChange={setOpenChatMemberEdit}>
+          <DialogContent className="max-w-md flex flex-col">
+
+            <DialogHeader>
+              <DialogTitle>Manage Member</DialogTitle>
+              <DialogDescription>
+                Update role, nickname or remove member from chat.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+
+              {/* Role */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Role</Label>
+
+                <Select
+                  value={form.role}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, role: v as ChatMemberRole }))
+                  }
+                >
+                  <SelectTrigger className="text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    <SelectItem value="OWNER">Owner</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    <SelectItem value="MEMBER">Member</SelectItem>
+                    <SelectItem value="VIEWER">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Nickname */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Nickname</Label>
+                <Input
+                  value={form.nickname}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, nickname: e.target.value }))
+                  }
+                  placeholder="Optional nickname"
+                />
+              </div>
+
+            </div>
+
+            <DialogFooter className="flex justify-between border-t pt-3">
+
+              {/* Left: Kick button */}
+              <Button
+                variant="destructive"
+                onClick={handleKickMember}
+              >
+                Kick out
+              </Button>
+
+              {/* Right: actions */}
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setOpenChatMemberEdit(false)}>
+                  Cancel
+                </Button>
+
+                <Button onClick={handleUpdateMember}>
+                  Save
+                </Button>
+              </div>
+
+            </DialogFooter>
+
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }
