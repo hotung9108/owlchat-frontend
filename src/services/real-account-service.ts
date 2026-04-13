@@ -60,4 +60,12 @@ export const accountService = {
       `${USER_PROFILE_BASE_URL}/${id}/status/${status}`
     );
   },
+
+  // PATCH /account/{id}/role/{status}
+  updateRole: (id: string, role: string) => {
+    console.log(`${USER_PROFILE_BASE_URL}/${id}/role/${role}`);
+    return apiClient.patch(
+      `${USER_PROFILE_BASE_URL}/${id}/role/${role}`
+    );
+  },
 };

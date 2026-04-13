@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   MessageSquare, Hash, User, Calendar, Clock,
-  FileText, Image, Video, Film, Bell, Power, PowerOff, Link,
+  FileText, Image, Video, Film, Bell, Power, PowerOff, Link, Download,
 } from "lucide-react"
 import { format } from "date-fns"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type MessageType  = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "DOC"
+type MessageType  = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE"
 type MessageState = "ORIGIN" | "EDITED" | "REMOVED"
 
 function Clickable({
@@ -68,7 +68,7 @@ function typeIcon(type: MessageType) {
     case "TEXT":           return <MessageSquare size={14} className={cls} />
     case "IMG":            return <Image     size={14} className={cls} />
     case "VID":            return <Film      size={14} className={cls} />
-    case "DOC":            return <FileText  size={14} className={cls} />
+    case "GENERIC_FILE":            return <FileText  size={14} className={cls} />
   }
 }
 
@@ -78,7 +78,7 @@ function TypeBadge({ type }: { type: MessageType }) {
     TEXT:           "border-primary/40 bg-primary/10 text-primary",
     IMG:            "border-pink-500/40 bg-pink-500/10 text-pink-600 dark:text-pink-400",
     VID:            "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400",
-    DOC:            "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+   GENERIC_FILE:            "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
   }
   return (
     <Badge variant="outline" className={`text-xs gap-1.5 ${styles[type]}`}>
@@ -144,10 +144,11 @@ export default function AdminContentMessage() {
   const navigate = useNavigate();
 
   const { id } = useParams<{ id: string }>()
-  const { messageDetail, fetchById, activate, loading } = useMessageService()
+  const { messageDetail, fetchById, activate, getResource, loading } = useMessageService()
 
   const [message, setMessage]       = useState<Message | null>(null)
   const [toggleOpen, setToggleOpen] = useState(false)
+  const [resourceSrc, setResourceSrc] = useState<string | null>(null)
 
   // Fetch on mount
   useEffect(() => {
@@ -158,6 +159,34 @@ export default function AdminContentMessage() {
   useEffect(() => {
     if (messageDetail) setMessage(mapMessage(messageDetail))
   }, [messageDetail])
+
+  // Fetch resource source URL
+  useEffect(() => {
+    let currentUrl = "";
+    const fetchResource = async () => {
+      if (message && ["IMG", "VID", "GENERIC_FILE"].includes(message.type)) {
+        try {
+          const res = await getResource(message.id);
+          // If the service returns a Blob (via axios or fetch)
+          if (res instanceof Blob) {
+            currentUrl = URL.createObjectURL(res);
+            setResourceSrc(currentUrl);
+          } else if (res.data instanceof Blob) {
+            currentUrl = URL.createObjectURL(res.data);
+            setResourceSrc(currentUrl);
+          } 
+        } catch (err) {
+          console.error("Failed to load message resource:", err);
+        }
+      }
+    };
+
+    fetchResource();
+
+    return () => {
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+    };
+  }, [message?.id, message?.type]);
 
   const handleToggleStatus = async () => {
     if (!message) return
@@ -227,18 +256,69 @@ export default function AdminContentMessage() {
               {message.state === "REMOVED" ? (
                 <p className="text-sm text-muted-foreground italic">This message has been removed.</p>
               ) : message.type === "IMG" ? (
-                <img src={message.content} alt="Message Image" className="max-w-full rounded-lg max-h-96 object-contain border border-border bg-muted/10" />
-              ) : message.type === "VID" ? (
-                <video src={message.content} controls className="max-w-full rounded-lg max-h-96 border border-border bg-black/5" />
-              ) : message.type === "DOC" ? (
-                <a href={message.content} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 border border-border rounded-xl bg-muted/20 hover:bg-muted transition-colors w-max max-w-full">
-                  <div className="flex items-center justify-center w-8 h-8 rounded bg-background border border-border shrink-0">
-                    <FileText size={14} className="text-muted-foreground" />
+                <div className="relative group">
+                  <div className="flex items-center justify-center h-full w-full">
+                    <img 
+                      src={resourceSrc || message.content} 
+                      alt="Message Image" 
+                      className="max-w-full rounded-lg max-h-96 object-contain border border-border bg-muted/10" 
+                    />
                   </div>
-                  <span className="text-sm font-medium text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate pr-2">
-                    {message.content.split('/').pop() || "Download Document"}
-                  </span>
-                </a>
+                  {!resourceSrc && loading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-lg">
+                      <Clock className="w-6 h-6 animate-pulse text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              ) : message.type === "VID" ? (
+                <div className="flex items-center justify-center h-full w-full">
+                  <video 
+                    src={resourceSrc || message.content} 
+                    controls 
+                    className="max-w-full rounded-lg max-h-96 border border-border bg-black/5" 
+                  />
+                </div>
+              ) : message.type === "GENERIC_FILE" ? (
+                <div className="flex flex-col gap-2">
+                  <a 
+                    href={resourceSrc || message.content} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex items-center gap-3 p-3 border border-border rounded-xl bg-muted/20 hover:bg-muted transition-colors w-max max-w-sm"
+                    download={message.content.split('/').pop() || "document"}
+                  >
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-background border border-border shrink-0 shadow-sm">
+                      <FileText size={20} className="text-muted-foreground" />
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-sm font-medium text-foreground truncate px-1">
+                        {message.content.split('/').pop() || "view_document"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-tight opacity-70 px-1">
+                        Document File
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Download size={14} />
+                    </div>
+                  </a>
+                  
+                  {/* Quick download button */}
+                  <button
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = resourceSrc || message.content;
+                      link.download = message.content.split('/').pop() || "document";
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="flex items-center gap-2 text-xs text-primary hover:underline w-max px-1"
+                  >
+                    <Download size={12} />
+                    <span>Download original file</span>
+                  </button>
+                </div>
               ) : (
                 <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
                   {message.content}
@@ -287,7 +367,7 @@ export default function AdminContentMessage() {
                   // Regular sender — clickable
                   <button
                     onClick={() => navigate(`/admin/user/${message.sender_id}`)}
-                    className="flex flex-col gap-0.5 text-left group"
+                    className="flex flex-col gap-0.5 text-left group text-primary hover:underline hover:bg-muted/70 transition-colors cursor-pointer"
                   >
                     {message.sender_name && (
                       <span className="text-sm font-medium text-primary group-hover:underline">

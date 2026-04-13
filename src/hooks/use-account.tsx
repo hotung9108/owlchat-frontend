@@ -55,6 +55,9 @@ export function useAccountService() {
     return accountService.updateStatus(id, status);
   };
 
+  const updateRole = async (id: string, role: string) => {
+    return accountService.updateRole(id, role);
+  };
   return {
     loading,
     accounts,
@@ -66,5 +69,6 @@ export function useAccountService() {
     updateAccount,
     deleteAccount,
     updateStatus,
+    updateRole,
   };
 }

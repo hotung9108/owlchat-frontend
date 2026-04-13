@@ -30,7 +30,8 @@ import {
   CalendarIcon,
   X,
   Users,
-  Plus
+  Plus,
+  Upload
 } from "lucide-react"
 import { format } from "date-fns"
 import type { DateRange } from "react-day-picker"
@@ -45,6 +46,7 @@ import type { UserProfile } from "@/types/user-profile.type"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { accountService } from "@/services/real-account-service"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const PAGE_SIZE = 10
 
@@ -111,6 +113,9 @@ export default function UsersManager() {
     avatar: "",
   });
 
+
+  const [avatarError, setAvatarError] = useState("")
+
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -146,7 +151,7 @@ export default function UsersManager() {
       const accountId: string = accountRes.data.id;
 
       // 2. Create the user profile linked to the new account
-      await userProfileService.addNewProfileToAccount(accountId, {
+      const newUser = await userProfileService.addNewProfileToAccount(accountId, {
         name: createForm.name || createForm.username,
         email: createForm.email,
         phoneNumber: createForm.phone_number,
@@ -168,8 +173,8 @@ export default function UsersManager() {
       });
       setCreateOpen(false);
 
-      // 4. Refresh the user list
-      setPage(1);
+      // 4. Redirect to new user
+     router("/admin/user/" + newUser.id)
     } catch (err) {
       console.error(err);
       alert("Failed to create user");
@@ -513,14 +518,60 @@ export default function UsersManager() {
                 </Select>
               </div>
 
-              {/* Avatar (reuse yours) */}
               <div className="grid gap-1.5">
                 <Label className="text-xs">Avatar</Label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                />
+                <div className="flex gap-3 items-center">
+
+                    {/* Avatar preview */}
+                    <Avatar className="w-14 h-14 border border-border shrink-0">
+                    <AvatarImage src={createForm.avatar} />
+                    <AvatarFallback className="text-lg bg-muted">{createForm.name[0]}</AvatarFallback>
+                    </Avatar>
+
+                    {/* Upload area */}
+                    <div className="flex-1">
+                    <input
+                        type="file"
+                        accept="image/*"
+                        id="avatar-upload"
+                        className="hidden"
+                        onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+
+                        // check max size 25MB
+                        if (file.size > 25 * 1024 * 1024) {
+                            setAvatarError("Image must be under 25MB")
+                            e.target.value = ""
+                            return
+                        }
+
+                        setAvatarError("")
+
+                        // convert to base64 so we can preview it
+                        const reader = new FileReader()
+                        reader.onload = (ev) => {
+                            setCreateForm(f => ({ ...f, avatar: ev.target?.result as string }))
+                        }
+                        reader.readAsDataURL(file)
+                        e.target.value = ""
+                        }}
+                    />
+                    <label
+                        htmlFor="avatar-upload"
+                        className="flex flex-col items-center justify-center w-full h-20 rounded-lg border border-dashed border-border bg-muted/30 hover:bg-muted/60 cursor-pointer transition-colors"
+                    >
+                        <Upload size={16} className="text-muted-foreground mb-1" />
+                        <span className="text-xs text-muted-foreground">Click to upload</span>
+                        <span className="text-xs text-muted-foreground/60">PNG, JPG, GIF — max 25MB</span>
+                    </label>
+
+                    {/* Error message */}
+                    {avatarError && (
+                        <p className="text-xs text-destructive mt-1">{avatarError}</p>
+                    )}
+                    </div>
+                </div>
               </div>
             </div>
           </div>
