@@ -8,7 +8,9 @@ import { useUserConversation } from "../chat/hooks/useUserConversation";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Icons } from "@/utils/constants";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNotification } from "@/hooks/use-notification";
+
 export default function MobileNav() {
     const paths = useUserNavigation();
     const { isActive } = useUserConversation();
@@ -16,6 +18,15 @@ export default function MobileNav() {
     const navigate = useNavigate();
     if (isActive) return null;
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const { unreadCount, fetchUnreadCount } = useNotification();
+
+    useEffect(() => {
+        fetchUnreadCount();
+        const interval = setInterval(() => {
+            fetchUnreadCount();
+        }, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     const toggleSettings = () => {
         setIsSettingsOpen((prev) => !prev);
@@ -55,23 +66,6 @@ export default function MobileNav() {
                             </li>
                         );
                     })}
-                    {/* <li>
-                        <ModeToggle />
-                    </li>
-                    <Tooltip>
-                        <TooltipTrigger>
-                            <Button size="icon" variant="outline">
-                                <Icons.Notification />
-                            </Button>
-                        </TooltipTrigger>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger>
-                            <Button size="icon" variant="outline">
-                                <Icons.Settings />
-                            </Button>
-                        </TooltipTrigger>
-                    </Tooltip> */}
                     <Button
                         size="icon"
                         variant="outline"
@@ -109,8 +103,18 @@ export default function MobileNav() {
                                 size="icon"
                                 variant="outline"
                                 aria-label="Notifications"
+                                className="relative"
+                                onClick={() => {
+                                    navigate("/notifications");
+                                    setIsSettingsOpen(false);
+                                }}
                             >
                                 <Icons.Notification />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-[16px] px-0.5 text-[9px] font-bold rounded-full bg-destructive text-white">
+                                        {unreadCount > 99 ? "99+" : unreadCount}
+                                    </span>
+                                )}
                             </Button>
                             
                             {/* My Profile */}
@@ -145,3 +149,4 @@ export default function MobileNav() {
         </Card>
     );
 }
+
