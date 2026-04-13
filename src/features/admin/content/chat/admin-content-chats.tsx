@@ -18,11 +18,16 @@ import {
 } from "@/components/ui/avatar"
 import {
   MessageSquare, Search, CalendarIcon, X, ChevronLeft, ChevronRight,
+  Plus,
 } from "lucide-react"
 import { format } from "date-fns"
 import type { DateRange } from "react-day-picker"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
 import { chatAdminService } from "@/services/chat-admin-service"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { useChatAdminService } from "@/hooks/use-chat-admin"
+import { useUserProfile } from "@/hooks/use-user-profile"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -47,6 +52,8 @@ const PAGE_SIZE = 10
 
 export default function AdminContentChats() {
   const navigate = useNavigate()
+  const { createChat } = useChatAdminService()
+  const { profile: initiatorProfile, loading: initiatorLoading, error: initiatorError, fetchProfileById } = useUserProfile()
   const [chats, setChats]                     = useState<Chat[]>([])
   const [loading, setLoading]                 = useState(true)
   const [search, setSearch]                   = useState("")
@@ -103,6 +110,57 @@ export default function AdminContentChats() {
     setPage(1)
   }
 
+  const [createChatDialogOpen, setCreateChatDialogOpen] = useState(false);
+
+  const [createForm, setCreateForm] = useState({
+    type: "" as "GROUP" | "PRIVATE" | "",
+    name: "",
+    initiatorId: "",
+  });
+
+  useEffect(() => {
+    const id = createForm.initiatorId?.trim();
+
+    if (!id) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      fetchProfileById(id);
+    }, 400); // debounce
+
+    return () => clearTimeout(timeout);
+  }, [createForm.initiatorId, fetchProfileById]);
+
+  const handleCreateChat = async () => {
+    if (!createForm.type || !createForm.name) return;
+
+    try {
+      const res = await createChat({
+        type: createForm.type,
+        name: createForm.name,
+        initiatorId: createForm.initiatorId || "",
+      });
+
+      const newChatId = res.data?.id ?? res.data;
+
+      // reset form
+      setCreateForm({
+        type: "",
+        name: "",
+        initiatorId: "",
+      });
+
+      setCreateChatDialogOpen(false);
+
+      // redirect to the newly created chat
+      navigate(`/admin/chat/${newChatId}`);
+
+    } catch (err) {
+      console.error("Create chat failed", err);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden rounded-xl border border-border bg-background">
 
@@ -111,14 +169,24 @@ export default function AdminContentChats() {
         icon={<MessageSquare size={18} />}
         title="Chats Manager"
         subtitle={``}
-        buttons={hasFilters ? [
+        buttons={[
+          ...(hasFilters ? [
           {
             label: "Clear filters",
             icon: <X size={13} />,
             colorClass: "border-transparent shadow-none bg-transparent hover:bg-transparent text-primary hover:text-primary",
             onClick: resetFilters
           }
-        ] : []}
+        ] : []),
+        {
+          label: "Create Chat",
+          icon: <Plus size={14} />,
+          colorClass: "bg-primary text-primary hover:text-primary cursor-pointer",
+          onClick: () => {
+            setCreateChatDialogOpen(true)
+          },
+        },
+      ]}
       />
 
       {/* ── Filters ── */}
@@ -311,6 +379,97 @@ export default function AdminContentChats() {
           </Button>
         </div>
       </div>
+
+      <Dialog open={createChatDialogOpen} onOpenChange={setCreateChatDialogOpen}>
+        <DialogContent className="max-w-md flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Create new chat</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+
+            {/* Chat type */}
+            <div className="grid gap-1.5">
+              <Label className="text-xs font-semibold">Chat type *</Label>
+              <Select
+                value={createForm.type}
+                onValueChange={(v) =>
+                  setCreateForm((f) => ({ ...f, type: v as "GROUP" | "PRIVATE" }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GROUP">Group</SelectItem>
+                  <SelectItem value="PRIVATE">Private</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Chat name */}
+            <div className="grid gap-1.5">
+              <Label className="text-xs">Chat name *</Label>
+              <Input
+                value={createForm.name}
+                onChange={(e) =>
+                  setCreateForm((f) => ({ ...f, name: e.target.value }))
+                }
+                placeholder="Chat name"
+              />
+            </div>
+
+            {/* Initiator Id */}
+            <div className="grid gap-1.5">
+              <Label className="text-xs">Initiator Id</Label>
+              <Input
+                value={createForm.initiatorId}
+                onChange={(e) =>
+                  setCreateForm((f) => ({ ...f, initiatorId: e.target.value }))
+                }
+                placeholder="User ID (optional)"
+              />
+
+              {/* User preview */}
+              {createForm.initiatorId && (
+                <div className="text-xs mt-1">
+                  {initiatorLoading ? (
+                    <span className="text-muted-foreground">Loading...</span>
+                  ) : initiatorProfile ? (
+                    <div className="flex flex-col">
+                      <span className="font-medium text-foreground">
+                        {initiatorProfile.name.trim()}
+                      </span>
+                      <span className="text-muted-foreground font-mono">
+                        {initiatorProfile.id}
+                      </span>
+                    </div>
+                  ) : initiatorError ? (
+                    <span className="text-destructive">User not found</span>
+                  ) : null}
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateChatDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              disabled={!createForm.type || !createForm.name}
+              onClick={handleCreateChat}
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -18,7 +18,8 @@ import {
 import {
   MessageSquare, Users, Hash, Clock, User, Crown, Shield,
   CheckCheck, Check, Eye, Trash2, Power, PowerOff,
-  Pencil
+  Pencil,
+  Plus
 } from "lucide-react"
 import { format } from "date-fns"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
@@ -27,6 +28,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -75,8 +77,6 @@ type Message = {
   removed_date: string | null
   created_date: string
 }
-
-type ChatMemberRole = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER";
 
 // ── Exposed methods via ref ───────────────────────────────────────────────────
 
@@ -162,7 +162,8 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
       fetchMembersByChat, 
       loading: membersLoading,
       update: updateMemberApi,
-      remove: removeMemberApi
+      remove: removeMemberApi,
+      create: createMemberApi
     } = useMemberAdminService()
     const { messages: rawMessages, fetchByChat, loading: messagesLoading } = useMessageService()
     const { profiles: rawUsers, fetchProfiles } = useUserProfile()
@@ -290,7 +291,7 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
     } | null>(null);
 
     const [form, setForm] = useState({
-      role: "MEMBER" as ChatMemberRole,
+      role: "MEMBER" as MemberRole,
       nickname: "",
     });
 
@@ -352,6 +353,82 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
       }
     };
 
+    const [open, setOpen] = useState(false);
+
+    const [userInput, setUserInput] = useState("");
+    const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+
+    const [shared, setShared] = useState({
+      role: "MEMBER" as MemberRole,
+      nickname: "",
+      inviterId: "",
+    });
+
+    const [error, setError] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+
+    const openAddMemberDialog = () => {
+      setSelectedUsers([]);
+      setUserInput("");
+      setShared({ role: "MEMBER", nickname: "", inviterId: "" });
+      setError("");
+      setOpen(true);
+    };
+
+    const handleAddUser = () => {
+      const userId = userInput.trim();
+      if (!userId) return;
+
+      const chatType = chat?.type ?? "GROUP";
+      const limit = chatType === "PRIVATE" ? 2 : 100;
+
+      if (members.length + selectedUsers.length >= limit) {
+        setError(`Member limit reached (${limit})`);
+        return;
+      }
+
+      // Prevent adding someone already in the chat
+      if (members.some((m) => m.member_id === userId)) {
+        setError("User is already a member of this chat");
+        return;
+      }
+
+      if (selectedUsers.includes(userId)) return;
+
+      setSelectedUsers((prev) => [...prev, userId]);
+      setUserInput("");
+      setError("");
+    };
+
+    const handleRemoveUser = (id: string) => {
+      setSelectedUsers((prev) => prev.filter((u) => u !== id));
+    };
+
+    const handleSubmit = async () => {
+      if (!id) return;
+      setSubmitting(true);
+      try {
+        for (const userId of selectedUsers) {
+          await createMemberApi({
+            memberId: userId,
+            chatId: id,
+            role: shared.role,
+            nickname: shared.nickname || undefined,
+            inviterId: shared.inviterId || undefined,
+          });
+        }
+
+        setOpen(false);
+        setSelectedUsers([]);
+        await refreshMembers();
+      } catch (err) {
+        console.error(err);
+        setError("Failed to add members");
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
     if (loading || !chat) {
       return <div className="flex items-center justify-center h-full w-full bg-background"><span className="text-muted-foreground">Loading chat details...</span></div>
     }
@@ -375,7 +452,13 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
               updateStatus(chat.id, !chat.status);
               setChat(prev => prev ? ({ ...prev, status: !prev.status }) : null)
             }
-          }
+          },
+          {
+            label: "Add Member",
+            icon: <Plus size={14} />,
+            colorClass: "bg-primary text-primary hover:text-primary cursor-pointer",
+            onClick: openAddMemberDialog,
+          },
         ]}
         />
 
@@ -650,7 +733,7 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                 <Select
                   value={form.role}
                   onValueChange={(v) =>
-                    setForm((f) => ({ ...f, role: v as ChatMemberRole }))
+                    setForm((f) => ({ ...f, role: v as MemberRole }))
                   }
                 >
                   <SelectTrigger className="text-xs">
@@ -705,6 +788,121 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
 
           </DialogContent>
         </Dialog>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+
+          <DialogContent className="sm:max-w-md flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Add Members</DialogTitle>
+              <DialogDescription>
+                Add users to this chat. Max {chat?.type === "PRIVATE" ? 2 : 100} members.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+
+              {/* Shared Role */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Role *</Label>
+                <Select
+                  value={shared.role}
+                  onValueChange={(v) =>
+                    setShared((s) => ({ ...s, role: v as MemberRole }))
+                  }
+                >
+                  <SelectTrigger className="text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="OWNER">Owner</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    <SelectItem value="MEMBER">Member</SelectItem>
+                    <SelectItem value="VIEWER">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Shared Nickname */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Nickname</Label>
+                <Input
+                  value={shared.nickname}
+                  onChange={(e) =>
+                    setShared((s) => ({ ...s, nickname: e.target.value }))
+                  }
+                  placeholder="Optional nickname"
+                />
+              </div>
+
+              {/* Shared Inviter */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Inviter ID</Label>
+                <Input
+                  value={shared.inviterId}
+                  onChange={(e) =>
+                    setShared((s) => ({ ...s, inviterId: e.target.value }))
+                  }
+                  placeholder="Optional inviter"
+                />
+              </div>
+
+              {/* User input */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Add User ID</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    placeholder="Enter user id"
+                  />
+                  <Button onClick={handleAddUser}>Add</Button>
+                </div>
+              </div>
+
+              {/* Selected users */}
+              <ScrollArea className="border rounded-md p-3 h-48">
+                <div className="space-y-2">
+                  {selectedUsers.map((u) => (
+                    <div
+                      key={u}
+                      className="flex items-center justify-between p-2 bg-muted/40 rounded"
+                    >
+                      <span className="text-xs font-mono">{u}</span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleRemoveUser(u)}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {/* Error */}
+              {error && (
+                <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                  {error}
+                </div>
+              )}
+
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+
+              <Button
+                onClick={handleSubmit}
+                disabled={selectedUsers.length === 0 || submitting}
+              >
+                {submitting ? "Adding..." : "Add Members"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>        
       </div>
     )
   }
