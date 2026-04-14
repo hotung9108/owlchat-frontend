@@ -28,6 +28,7 @@ export function LoginForm({
     description = "Login to your OwlChat account",
     ...props
 }: LoginFormProps) {
+    const navigate = useNavigate();
     const [alertMessage, setAlertMessage] = useState<string | null>(null);
     const [alertType, setAlertType] = useState<"success" | "error" | null>(
         null,
@@ -36,7 +37,7 @@ export function LoginForm({
     const [password, setPassword] = useState<string>("");
     const [showAlert, setShowAlert] = useState<boolean>(false);
     const { login } = useAuth();
-    const navigate = useNavigate();
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -48,10 +49,13 @@ export function LoginForm({
                 setShowAlert(false);
                 // Redirect based on role from response
                 if (response.role === "ADMIN") {
+                    // window.location.href = "/admin";
                     navigate("/admin");
                 } else if (response.role === "USER" || response.role === "BUSINESS") {
+                    // window.location.href = "/conversations";
                     navigate("/conversations");
                 } else {
+                    // window.location.href = navigateUrl;
                     navigate(navigateUrl);
                 }
             }, 2000);

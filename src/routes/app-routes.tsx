@@ -22,6 +22,7 @@ import AdminChatDetails from "@/features/admin/content/chat/admin-content-chat";
 import AdminContentMessage from "@/features/admin/content/chat/admin-content-message";
 import { ProtectedRoute } from "@/components/protected-route";
 import PinCodePage from "@/features/auth/pages/account-authenticate-page";
+import AdminContentMessageReports from "@/features/admin/content/analysis/admin-content-message-reports";
 
 const AppRoutes = () => {
     return (
@@ -50,6 +51,7 @@ const AppRoutes = () => {
             <Route path="/admin/chats" element={<ProtectedRoute requiredRole="ADMIN"><AdminPage children={<AdminContentChats></AdminContentChats>}></AdminPage></ProtectedRoute>}/>
             <Route path="/admin/chat/:id" element={<ProtectedRoute requiredRole="ADMIN"><AdminPage children={<AdminChatDetails></AdminChatDetails>}></AdminPage></ProtectedRoute>}/>
             <Route path="/admin/message/:id" element={<ProtectedRoute requiredRole="ADMIN"><AdminPage children={<AdminContentMessage></AdminContentMessage>}></AdminPage></ProtectedRoute>}/>
+            <Route path="/admin/report/message" element={<ProtectedRoute requiredRole="ADMIN"><AdminPage children={<AdminContentMessageReports></AdminContentMessageReports>}></AdminPage></ProtectedRoute>}/>
             
             <Route path="profile" element={<ProfileLayout />}>
                 <Route index element={<ProfilePage />} />

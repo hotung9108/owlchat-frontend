@@ -7,7 +7,7 @@ import { useLocation, useNavigate } from "react-router-dom"
 import type { SidebarGroup, UserInfor } from "../configs/admin-sidebar.config";
 import AdminSidebarUser from "./admin-sidebar-user";
 import { Button } from "@/components/ui/button";
-import { LogOut, Moon, Sun } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { useUserProfileContext } from "@/providers/user-profile-provider";
 
@@ -34,7 +34,9 @@ export default function AdminSidebar({groups, user_infor}: AdminSidebarProps) {
             // Clear tokens
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
-            window.location.href = "/login";
+            // window.location.href = "/login";
+            navigate("/login");
+
         } catch (error) {
             console.error("Logout failed:", error);
         }

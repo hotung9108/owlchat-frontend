@@ -6,9 +6,7 @@ import FriendDiscoveryFriendPage from "./friend-discoveryfriend-page";
 import FriendListFriendPage from "./friend-listfriend-page";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import owlLogo from "@/assets/owl-logo/black/owl-512.png";
-import { Icons } from "@/utils/constants";
-type Props = {};
-export default function FriendPage(props: Props) {
+export default function FriendPage() {
     const [activeTab, setActiveTab] = useState("list");
 
     const renderContent = () => {

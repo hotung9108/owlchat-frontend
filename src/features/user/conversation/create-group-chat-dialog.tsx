@@ -23,13 +23,6 @@ type Props = {
     onChatCreated?: (chatId: string) => void;
 };
 
-interface Friendship {
-    id: string;
-    firstUserId: string;
-    secondUserId: string;
-    createdDate: string;
-}
-
 interface FriendOption {
     userId: string;
     userName: string;

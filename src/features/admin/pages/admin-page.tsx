@@ -3,6 +3,7 @@ import AdminLayout from "../layout/admin-layout";
 import AdminSidebar from "../components/admin-sidebar";
 import { type SidebarGroup, type UserInfor } from "../configs/admin-sidebar.config";
 import { Icons } from "@/utils/constants";
+import { Flag } from "lucide-react";
 
 type Props = {
   children: React.ReactNode;
@@ -16,6 +17,11 @@ export const sidebarGroups: SidebarGroup[] = [
         label: "Statistics",
         href: "/admin/stats",
         icon: <Icons.Analytics/>
+      },
+      {
+        label: "Message reports",
+        href: "/admin/report/message",
+        icon: <Flag/>
       }
     ]
   },

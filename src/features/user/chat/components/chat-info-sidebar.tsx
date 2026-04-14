@@ -2,16 +2,27 @@ import { useEffect, useState, useCallback } from "react";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import UserAvatar from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
-import { X, Search, MoreVertical, Edit2, Shield, LogOut, Check } from "lucide-react";
+import { X, Search, MoreVertical, Edit2, Shield, LogOut, Check, UserPlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import type { UserProfile } from "@/types/user-profile.type";
+import { useUserProfile } from "@/hooks/use-user-profile";
+import friendshipService from "@/services/friendship-service";
 
 type ChatInfoSidebarProps = {
     conversationId: string;
     currentUserId?: string;
+    type: string;
     onClose: () => void;
 };
+
+// type MemberRole = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER"
+// type ChatType = "PRIVATE" | "GROUP"
 
 const ROLE_RANK = {
     "OWNER": 4,
@@ -20,7 +31,7 @@ const ROLE_RANK = {
     "VIEWER": 1
 };
 
-export default function ChatInfoSidebar({ conversationId, currentUserId, onClose }: ChatInfoSidebarProps) {
+export default function ChatInfoSidebar({ type, conversationId, currentUserId, onClose }: ChatInfoSidebarProps) {
     const [members, setMembers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingNicknameId, setEditingNicknameId] = useState<string | null>(null);
@@ -30,8 +41,12 @@ export default function ChatInfoSidebar({ conversationId, currentUserId, onClose
         getChatMembersByChatId,
         patchChatMemberRole,
         patchChatMemberNickname,
-        deleteChatMember
+        deleteChatMember,
+        postChatMember
     } = useChatMemberUser();
+    
+    const { fetchProfileById } = useUserProfile();
+    const [loadingFriends, setLoadingFriends] = useState(false);
 
     const fetchMembers = useCallback(async () => {
         try {
@@ -87,12 +102,10 @@ export default function ChatInfoSidebar({ conversationId, currentUserId, onClose
     };
 
     const handleUpdateNickname = async (targetId: string) => {
-        if (!editNicknameContent.trim()) {
-            setEditingNicknameId(null);
-            return;
-        }
         try {
-            await patchChatMemberNickname(null, null, targetId, conversationId, { nickname: editNicknameContent.trim() });
+            await patchChatMemberNickname(null, null, targetId, conversationId, { 
+                nickname: editNicknameContent.trim() || "" 
+            });
             setEditingNicknameId(null);
             await fetchMembers();
         } catch (error) {
@@ -109,6 +122,92 @@ export default function ChatInfoSidebar({ conversationId, currentUserId, onClose
         return isMe || currentUserRank > memberRank;
     };
 
+    const [open, setOpen] = useState(false);
+
+    const [friends, setFriends] = useState<UserProfile[]>([]);
+    const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+    const [search, setSearch] = useState("");
+
+    // const [shared, setShared] = useState({
+    //   role: "MEMBER" as MemberRole,
+    //   nickname: "",
+    //   inviterId: "",
+    // });
+
+    const [error, setError] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+
+    const openAddMemberDialog = async () => {
+      setSelectedUsers([]);
+      setSearch("");
+    //   setShared({ role: "MEMBER", nickname: "", inviterId: "" });
+      setError("");
+      setOpen(true);
+      
+      setLoadingFriends(true);
+      try {
+          const data = await friendshipService.getFriendships(null, currentUserId || null, 0, 100);
+          const fetchedFriendships = data?.content || data || [];
+          
+          if (Array.isArray(fetchedFriendships)) {
+              const profilePromises = fetchedFriendships.map(async (f: any) => {
+                  const friendId = f.firstUserId === currentUserId ? f.secondUserId : f.firstUserId;
+                  const profile = await fetchProfileById(friendId);
+                  return profile;
+              });
+
+              const profiles = await Promise.all(profilePromises);
+              
+              const chatMemberIds = new Set(members.map(m => m.memberId || m.userId || m.id));
+              const validFriends = profiles.filter((p): p is UserProfile => p !== null && !chatMemberIds.has(p.id));
+              
+              setFriends(validFriends);
+          }
+      } catch (err) {
+          console.error("Failed to load friends", err);
+      } finally {
+          setLoadingFriends(false);
+      }
+    };
+
+    const handleSubmit = async () => {
+      if (!conversationId) return;
+      setSubmitting(true);
+      try {
+        for (const userId of selectedUsers) {
+          await postChatMember(null, null, {
+            memberId: userId,
+            chatId: conversationId,
+            // role: shared.role,
+            // nickname: shared.nickname || undefined,
+            // inviterId: shared.inviterId || undefined,
+          });
+        }
+
+        setOpen(false);
+        setSelectedUsers([]);
+        await fetchMembers();
+      } catch (err) {
+        console.error(err);
+        setError("Failed to add members");
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
+    const toggleUser = (id: string) => {
+    setSelectedUsers((prev) =>
+        prev.includes(id)
+        ? prev.filter((u) => u !== id)
+        : [...prev, id]
+    );
+    };
+
+    const filteredFriends = friends.filter((f) =>
+    f.name.toLowerCase().includes(search.toLowerCase()) ||
+    f.id.toLowerCase().includes(search.toLowerCase())
+    );
+
     return (
         <Card className="w-[320px] lg:w-[360px] shrink-0 h-full flex flex-col overflow-hidden animate-in slide-in-from-right-4 duration-300 p-2 gap-2">
             {/* Header */}
@@ -124,6 +223,16 @@ export default function ChatInfoSidebar({ conversationId, currentUserId, onClose
                 
                 {/* Actions */}
                 <div className="flex flex-col gap-2">
+                    {type !== "PRIVATE" && (
+                        <Button
+                            variant="secondary"
+                            className="w-full justify-start gap-3 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30"
+                            onClick={openAddMemberDialog}
+                        >
+                            <UserPlus className="w-4 h-4" />
+                            Add Members
+                        </Button>
+                    )}
                     <Button 
                         variant="destructive" 
                         className="w-full justify-start gap-3 rounded-xl bg-red-500/10 text-red-600 hover:bg-red-500/20 hover:text-red-700 dark:bg-red-950/30 dark:hover:bg-red-950/50"
@@ -254,6 +363,127 @@ export default function ChatInfoSidebar({ conversationId, currentUserId, onClose
                     )}
                 </div>
             </div>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md flex flex-col">
+            <DialogHeader>
+            <DialogTitle>Add Friends to Group</DialogTitle>
+            <DialogDescription>
+                Select friends to add into this chat.
+            </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+
+            {/* Role */}
+            {/* <div className="grid gap-1.5">
+                <Label className="text-xs">Role *</Label>
+                <Select
+                value={shared.role}
+                onValueChange={(v) =>
+                    setShared((s) => ({ ...s, role: v as MemberRole }))
+                }
+                >
+                <SelectTrigger className="text-xs">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    <SelectItem value="MEMBER">Member</SelectItem>
+                    <SelectItem value="VIEWER">Viewer</SelectItem>
+                </SelectContent>
+                </Select>
+            </div> */}
+
+            {/* Nickname */}
+            {/* <div className="grid gap-1.5">
+                <Label className="text-xs">Nickname</Label>
+                <Input
+                value={shared.nickname}
+                onChange={(e) =>
+                    setShared((s) => ({ ...s, nickname: e.target.value }))
+                }
+                placeholder="Optional nickname"
+                />
+            </div> */}
+
+            {/* 🔍 Search */}
+            <div className="grid gap-1.5">
+                <Label className="text-xs">Search friends</Label>
+                <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name or id"
+                />
+            </div>
+
+            {/* 👥 Friend list */}
+            <ScrollArea className="border rounded-md p-2 h-64">
+                <div className="space-y-1">
+                {loadingFriends ? (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                ) : filteredFriends.length === 0 ? (
+                    <div className="text-center text-sm text-muted-foreground mt-10">
+                        {friends.length === 0 ? "You have no friends available to add." : "No friends found matching your search."}
+                    </div>
+                ) : (
+                    filteredFriends.map((f) => {
+                        const checked = selectedUsers.includes(f.id);
+
+                        return (
+                        <div
+                            key={f.id}
+                            className="flex items-center gap-3 p-2 rounded hover:bg-muted/40 cursor-pointer"
+                            onClick={() => toggleUser(f.id)}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleUser(f.id)}
+                            />
+
+                            <div className="flex flex-col truncate">
+                                <span className="text-xs font-medium truncate">{f.name}</span>
+                                <span className="text-[10px] text-muted-foreground font-mono truncate">
+                                    {f.id}
+                                </span>
+                            </div>
+                        </div>
+                        );
+                    })
+                )}
+                </div>
+            </ScrollArea>
+            {/* Selected count */}
+            <div className="text-xs text-muted-foreground">
+                Selected: {selectedUsers.length}
+            </div>
+
+            {/* Error */}
+            {error && (
+                <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                {error}
+                </div>
+            )}
+
+            </div>
+
+            <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+            </Button>
+
+            <Button
+                onClick={handleSubmit}
+                disabled={selectedUsers.length === 0 || submitting}
+            >
+                {submitting ? "Adding..." : "Add Members"}
+            </Button>
+            </DialogFooter>
+        </DialogContent>
+        </Dialog>
         </Card>
     );
 }

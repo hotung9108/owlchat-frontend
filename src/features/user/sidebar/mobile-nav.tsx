@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, User, Palette } from "lucide-react";
+import { User, Palette } from "lucide-react";
 import { useUserNavigation } from "../chat/hooks/userUserNavigation";
 import { useUserConversation } from "../chat/hooks/useUserConversation";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -35,7 +35,8 @@ export default function MobileNav() {
     const handleLogout = async () => {
         try {
             await logout();
-            window.location.href = "/login";
+            navigate("/login");
+            // window.location.href = "/login";
         } catch (error) {
             console.error("Logout failed:", error);
         }
