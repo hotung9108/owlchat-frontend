@@ -4,6 +4,7 @@ import { messageUserService } from "@/services/message-user-service";
 import UserAvatar from "@/components/shared/user-avatar";
 import { FileText, Download, Film, Clock, MoreVertical, Pencil, Trash2, X, Check, Flag } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import MessageReportDialog from "./message-report-dialog";
 
 type ChatBodyProps = {
     messages: Message[];
@@ -24,6 +25,7 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
         const scrollHeightRef = useRef<number>(0);
         const lastScrollTopRef = useRef<number>(0);
         const lastMessageIdRef = useRef<string | null>(null);
+        const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
 
         const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
             const target = e.target as HTMLDivElement;
@@ -282,7 +284,7 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                                     </DropdownMenuItem>
                                                 </>
                                             ) : (
-                                                <DropdownMenuItem onClick={() => alert("Report action will be implemented soon!")}>
+                                                <DropdownMenuItem onClick={() => setReportingMessageId(message.id)}>
                                                     <Flag className="w-4 h-4 mr-2" /> Report
                                                 </DropdownMenuItem>
                                             )}
@@ -294,6 +296,13 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                         </div>
                     );
                 })}
+                <MessageReportDialog
+                    messageId={reportingMessageId}
+                    open={!!reportingMessageId}
+                    onOpenChange={(open) => {
+                        if (!open) setReportingMessageId(null);
+                    }}
+                />
             </div>
         );
     },
