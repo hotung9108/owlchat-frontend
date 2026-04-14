@@ -75,8 +75,8 @@ export default function UsersManager() {
           search, page - 1, PAGE_SIZE, g, dStart, dEnd, true, s
         )
         if (active) {
-          setUsers(res)
-          setHasMore(res.length === PAGE_SIZE)
+          setUsers(res.content)
+          setHasMore(res.pageSize === PAGE_SIZE)
         }
       } catch (err) {
         console.error("Failed to load users", err)

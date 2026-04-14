@@ -253,9 +253,11 @@ export default function AdminContentMessage() {
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Content</span>
             </div>
             <div className="px-5 py-4">
-              {message.state === "REMOVED" ? (
-                <p className="text-sm text-muted-foreground italic">This message has been removed.</p>
-              ) : message.type === "IMG" ? (
+              {
+              // message.state === "REMOVED" ? (
+              //   <p className="text-sm text-muted-foreground italic">This message has been removed.</p>
+              // ) : 
+              message.type === "IMG" ? (
                 <div className="relative group">
                   <div className="flex items-center justify-center h-full w-full">
                     <img 
