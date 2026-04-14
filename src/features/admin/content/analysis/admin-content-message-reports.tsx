@@ -55,7 +55,7 @@ export default function AdminContentMessageReports() {
 
   const [search, setSearch]               = useState("")
   const [dateRange, setDateRange]         = useState<DateRange | undefined>()
-  const [sortAsc, setSortAsc]             = useState(true)
+  const [sortAsc, setSortAsc]             = useState(false)
   const [page, setPage]                   = useState(1)
   const [refreshKey, setRefreshKey]       = useState(0)
 

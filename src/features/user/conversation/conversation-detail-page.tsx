@@ -40,6 +40,7 @@ export default function ConversationDetailPage() {
     const { profile, fetchUserProfile, fetchProfileById } = useUserProfile();
     const { getChatByChatId } = useChatUser();
     const { getChatMembersByChatId } = useChatMemberUser();
+    const [chatType, setChatType] = useState("")
 
     // 1. Fetch current user profile
     useEffect(() => {
@@ -54,7 +55,7 @@ export default function ConversationDetailPage() {
             try {
                 const chat = await getChatByChatId(null, null, conversationId);
                 console.log("[Chat] Chat metadata:", { id: chat?.id, type: chat?.type, name: chat?.name });
-                
+                setChatType(chat.type)
                 if (chat.type === "PRIVATE") {
                     try {
                         const membersResp = await getChatMembersByChatId(null, null, conversationId);
@@ -277,6 +278,7 @@ export default function ConversationDetailPage() {
                 
                 {isSidebarOpen && conversationId && (
                     <ChatInfoSidebar 
+                        type={chatType}
                         conversationId={conversationId} 
                         currentUserId={profile?.id} 
                         onClose={() => setIsSidebarOpen(false)} 

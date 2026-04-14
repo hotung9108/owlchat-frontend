@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/field";
 import owlLogo512 from "@/assets/owl-logo/black/owl-512.png";
 import { Input } from "@/components/ui/input";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../../hooks/use-auth";
 import { CheckCircle2Icon, AlertCircleIcon } from "lucide-react";
@@ -36,7 +36,7 @@ export function LoginForm({
     const [password, setPassword] = useState<string>("");
     const [showAlert, setShowAlert] = useState<boolean>(false);
     const { login } = useAuth();
-    const navigate = useNavigate();
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -48,11 +48,11 @@ export function LoginForm({
                 setShowAlert(false);
                 // Redirect based on role from response
                 if (response.role === "ADMIN") {
-                    navigate("/admin");
+                    window.location.href = "/admin";
                 } else if (response.role === "USER" || response.role === "BUSINESS") {
-                    navigate("/conversations");
+                    window.location.href = "/conversations";
                 } else {
-                    navigate(navigateUrl);
+                    window.location.href = navigateUrl;
                 }
             }, 2000);
         } catch (error: any) {
