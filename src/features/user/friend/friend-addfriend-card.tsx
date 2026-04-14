@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
-import { useUserProfile } from "@/hooks/use-user-profile";
+import { useUserProfileContext } from "@/providers/user-profile-provider";
 
 type FriendRequestCardProps = {
     friendId: string;
     requestId: string;
-    status: "PENDING" | "ACCEPTED" | "REJECTED"; // Thêm trạng thái
+    status: "PENDING" | "ACCEPTED" | "REJECTED";
     onAccept: (id: string) => void;
     onDecline: (id: string) => void;
 };
@@ -19,24 +19,39 @@ export default function FriendRequestCard({
     onAccept,
     onDecline,
 }: FriendRequestCardProps) {
-    const { profile, fetchProfileById, fetchAvatar, loading, error } = useUserProfile();
+    const { fetchProfileById } = useUserProfileContext();
+    const [profile, setProfile] = useState<any | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     
     useEffect(() => {
-        fetchProfileById(friendId); // Fetch profile của bạn bè
+        setLoading(true);
+        fetchProfileById(friendId)
+            .then(data => {
+                setProfile(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Error fetching profile:", err);
+                setError("Failed to load profile");
+                setLoading(false);
+            });
     }, [friendId, fetchProfileById]);
 
     useEffect(() => {
         if (profile?.avatar) {
-            fetchAvatar(friendId)
-                .then(blob => {
-                    if (blob && blob.size > 0) {
-                        setAvatarUrl(URL.createObjectURL(blob));
-                    }
-                })
-                .catch(err => console.error("Error fetching avatar:", err));
+            import("@/services/user-profile-service").then(({ userProfileService }) => {
+                userProfileService.getUserAvatar(friendId)
+                    .then(blob => {
+                        if (blob && blob.size > 0) {
+                            setAvatarUrl(URL.createObjectURL(blob));
+                        }
+                    })
+                    .catch(err => console.error("Error fetching avatar:", err));
+            });
         }
-    }, [profile?.avatar, friendId, fetchAvatar]);
+    }, [profile?.avatar, friendId]);
 
     useEffect(() => {
         return () => {

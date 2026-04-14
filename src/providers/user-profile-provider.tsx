@@ -7,13 +7,14 @@ interface UserProfileContextType {
   loading: boolean;
   error: string | null;
   refreshProfile: () => Promise<void>;
-  fetchProfileById: (id: string) => Promise<UserProfile | undefined>;
+  fetchProfileById: (id: string) => Promise<UserProfile | undefined | null>;
+  clearProfileCache: (id?: string) => void;
 }
 
 const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
 
 export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { profile, loading, error, fetchUserProfile, fetchProfileById } = useUserProfileHook();
+  const { profile, loading, error, fetchUserProfile, fetchProfileById, clearProfileCache } = useUserProfileHook();
   const isInitialMount = useRef(true);
 
   // 1. Stable refresh function - only call if user is authenticated
@@ -48,8 +49,9 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     loading,
     error,
     refreshProfile,
-    fetchProfileById
-  }), [profile, loading, error, refreshProfile, fetchProfileById]);
+    fetchProfileById,
+    clearProfileCache,
+  }), [profile, loading, error, refreshProfile, fetchProfileById, clearProfileCache]);
 
   return (
     <UserProfileContext.Provider value={value}>

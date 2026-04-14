@@ -6,45 +6,64 @@ import type { FriendRequestStatus } from "@/types/enum/friend-request-status";
 import ErrorLogo from "@/components/shared/error-logo";
 import LoadingLogo from "@/components/shared/loading-logo";
 import FriendRequestCard from "./friend-addfriend-card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Props = {};
 
 export default function FriendAddFriendPage(props: Props) {
     const {
         getReceiveFriendRequests,
+        getSendFriendRequests,
         patchFriendRequestStatus,
         loading,
         error,
     } = useFriend();
-    const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+    const [receivedRequests, setReceivedRequests] = useState<FriendRequest[]>([]);
+    const [sentRequests, setSentRequests] = useState<FriendRequest[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
+    const [activeTab, setActiveTab] = useState("received");
 
     useEffect(() => {
-        const fetchFriendRequests = async () => {
+        const fetchAllRequests = async () => {
             try {
-                const requests = await getReceiveFriendRequests(
+                // Fetch received requests (all statuses)
+                const received = await getReceiveFriendRequests(
                     null,
                     null,
                     0, 
-                    10,
+                    100,
                     true,
                     undefined,
-                    "PENDING"
+                    undefined  // No status filter - get all
                 );
-                setFriendRequests(requests);
+                setReceivedRequests(received);
+
+                // Fetch sent requests (all statuses)
+                const sent = await getSendFriendRequests(
+                    null,
+                    null,
+                    0, 
+                    100,
+                    true,
+                    undefined,
+                    undefined  // No status filter - get all
+                );
+                setSentRequests(sent);
             } catch (err) {
                 console.error("Error fetching friend requests:", err);
             }
         };
-        fetchFriendRequests();
-    }, []);
+        fetchAllRequests();
+    }, [getReceiveFriendRequests, getSendFriendRequests]);
 
     const handleAcceptFriendRequest = async (id: string) => {
         try {
             const request = { response: "ACCEPTED" as FriendRequestStatus };
             await patchFriendRequestStatus(null, null, id, request);
-            setFriendRequests((prevRequests) =>
-                prevRequests.filter((request) => request.id !== id),
+            setReceivedRequests((prevRequests) =>
+                prevRequests.map((req) =>
+                    req.id === id ? { ...req, status: "ACCEPTED" as FriendRequestStatus } : req
+                ),
             );
             console.log(`Accepted friend request with ID: ${id}`);
         } catch (err) {
@@ -56,8 +75,10 @@ export default function FriendAddFriendPage(props: Props) {
         try {
             const request = { response: "REJECTED" as FriendRequestStatus };
             await patchFriendRequestStatus(null, null, id, request);
-            setFriendRequests((prevRequests) =>
-                prevRequests.filter((request) => request.id !== id),
+            setReceivedRequests((prevRequests) =>
+                prevRequests.map((req) =>
+                    req.id === id ? { ...req, status: "REJECTED" as FriendRequestStatus } : req
+                ),
             );
             console.log(`Declined friend request with ID: ${id}`);
         } catch (err) {
@@ -65,8 +86,12 @@ export default function FriendAddFriendPage(props: Props) {
         }
     };
 
-    const filteredRequests = friendRequests.filter((request) =>
+    const filteredReceivedRequests = receivedRequests.filter((request) =>
         request.senderId.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+
+    const filteredSentRequests = sentRequests.filter((request) =>
+        request.receiverId.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
     if (loading) return <LoadingLogo />;
@@ -83,24 +108,90 @@ export default function FriendAddFriendPage(props: Props) {
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            {filteredRequests.length === 0 ? (
-                <div className="text-center">
-                    <p>No friend requests found.</p>
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="received">
+                        Received ({filteredReceivedRequests.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="sent">
+                        Sent ({filteredSentRequests.length})
+                    </TabsTrigger>
+                </TabsList>
+
+                {/* Received Requests Tab */}
+                <div className="mt-6">
+                    {activeTab === "received" && (
+                        <>
+                            {filteredReceivedRequests.length === 0 ? (
+                                <div className="text-center">
+                                    <p>No received friend requests.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {filteredReceivedRequests.map((request) => (
+                                        <FriendRequestCard
+                                            key={request.id}
+                                            requestId={request.id}
+                                            friendId={request.senderId}
+                                            status={request.status}
+                                            onAccept={handleAcceptFriendRequest}
+                                            onDecline={handleDeclineFriendRequest}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* Sent Requests Tab */}
+                    {activeTab === "sent" && (
+                        <>
+                            {filteredSentRequests.length === 0 ? (
+                                <div className="text-center">
+                                    <p>No sent friend requests.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {filteredSentRequests.map((request) => (
+                                        <div
+                                            key={request.id}
+                                            className="p-4 rounded-lg border border-border bg-card text-card-foreground hover:shadow-md transition-shadow"
+                                        >
+                                            <div className="flex justify-between items-start mb-3">
+                                                <h3 className="font-semibold text-primary">
+                                                    {request.receiverId}
+                                                </h3>
+                                                <span
+                                                    className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                                        request.status === "PENDING"
+                                                            ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300"
+                                                            : request.status === "ACCEPTED"
+                                                            ? "bg-green-500/20 text-green-700 dark:text-green-300"
+                                                            : "bg-red-500/20 text-red-700 dark:text-red-300"
+                                                    }`}
+                                                >
+                                                    {request.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Sent: {new Date(request.createdDate).toLocaleDateString()}
+                                            </p>
+                                            {request.status !== "PENDING" && (
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {request.status === "ACCEPTED"
+                                                        ? "Request accepted"
+                                                        : "Request rejected"}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {filteredRequests.map((request) => (
-                        <FriendRequestCard
-                            key={request.id}
-                            requestId={request.id}
-                            friendId={request.senderId}
-                            status={request.status}
-                            onAccept={handleAcceptFriendRequest}
-                            onDecline={handleDeclineFriendRequest}
-                        />
-                    ))}
-                </div>
-            )}
+            </Tabs>
         </>
     );
 }

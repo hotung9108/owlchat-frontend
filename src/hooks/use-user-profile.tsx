@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { userProfileService } from "@/services/user-profile-service";
 import type {
     UserProfile,
@@ -15,6 +15,10 @@ export const useUserProfile = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [pageSize, setPageSize] = useState(10);
+
+    // Cache and deduplication for profile fetching
+    const profileCacheRef = useRef<Map<string, UserProfile>>(new Map());
+    const inFlightRequestsRef = useRef<Map<string, Promise<UserProfile | null>>>(new Map());
 
     const fetchProfiles = useCallback(
         async (
@@ -85,15 +89,32 @@ export const useUserProfile = () => {
     );
 
     const fetchProfileById = useCallback(async (id: string) => {
-        try {
-            const data = await userProfileService.getProfileById(id);
-            // Don't modify profile state - just return the fetched data
-            // profile state should only be modified by fetchUserProfile (current user)
-            return data; 
-        } catch (err: any) {
-            console.error("Failed to fetch profile:", err.message);
-            return null;
+        // Return from cache if available
+        if (profileCacheRef.current.has(id)) {
+            return profileCacheRef.current.get(id)!;
         }
+
+        // Return existing in-flight request to avoid duplicate API calls
+        if (inFlightRequestsRef.current.has(id)) {
+            return inFlightRequestsRef.current.get(id)!;
+        }
+
+        // Create new request and cache it
+        const newRequest = userProfileService
+            .getProfileById(id)
+            .then((data) => {
+                profileCacheRef.current.set(id, data);
+                inFlightRequestsRef.current.delete(id);
+                return data;
+            })
+            .catch((err: any) => {
+                inFlightRequestsRef.current.delete(id);
+                console.error("Failed to fetch profile:", err.message);
+                return null;
+            });
+
+        inFlightRequestsRef.current.set(id, newRequest);
+        return newRequest;
     }, []);
 
     const fetchUserProfile = useCallback(async (accountId: string | null = null) => {
@@ -138,6 +159,9 @@ export const useUserProfile = () => {
                     userProfileRequest,
                 );
                 setProfile(data);
+                // Invalidate cache for this profile
+                profileCacheRef.current.delete(id);
+                return data;
             } catch (err: any) {
                 setError(err.message || "Failed to update profile");
             } finally {
@@ -153,10 +177,21 @@ export const useUserProfile = () => {
         try {
             await userProfileService.deleteProfile(id);
             setProfile(null);
+            // Invalidate cache for this profile
+            profileCacheRef.current.delete(id);
         } catch (err: any) {
             setError(err.message || "Failed to delete profile");
         } finally {
             setLoading(false);
+        }
+    }, []);
+
+    // Cache management utilities
+    const clearProfileCache = useCallback((id?: string) => {
+        if (id) {
+            profileCacheRef.current.delete(id);
+        } else {
+            profileCacheRef.current.clear();
         }
     }, []);
 
@@ -209,5 +244,6 @@ export const useUserProfile = () => {
         deleteProfile,
         uploadAvatar,
         fetchAvatar,
+        clearProfileCache,
     };
 };
