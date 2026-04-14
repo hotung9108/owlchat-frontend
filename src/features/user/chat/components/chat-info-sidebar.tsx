@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { UserProfile } from "@/types/user-profile.type";
 import { useUserProfile } from "@/hooks/use-user-profile";
@@ -21,7 +21,7 @@ type ChatInfoSidebarProps = {
     onClose: () => void;
 };
 
-type MemberRole = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER"
+// type MemberRole = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER"
 // type ChatType = "PRIVATE" | "GROUP"
 
 const ROLE_RANK = {
@@ -101,7 +101,7 @@ export default function ChatInfoSidebar({ type, conversationId, currentUserId, o
         }
     };
 
-    const handleUpdateNickname = async (targetId: string, memberName: string) => {
+    const handleUpdateNickname = async (targetId: string) => {
         try {
             await patchChatMemberNickname(null, null, targetId, conversationId, { 
                 nickname: editNicknameContent.trim() || "" 
@@ -283,9 +283,9 @@ export default function ChatInfoSidebar({ type, conversationId, currentUserId, o
                                                             value={editNicknameContent}
                                                             onChange={(e) => setEditNicknameContent(e.target.value)}
                                                             className="h-6 w-[120px] px-2 text-xs"
-                                                            onKeyDown={(e) => e.key === 'Enter' && handleUpdateNickname(mId, member.memberName || "User")}
+                                                            onKeyDown={(e) => e.key === 'Enter' && handleUpdateNickname(mId)}
                                                         />
-                                                        <button onClick={() => handleUpdateNickname(mId, member.memberName || "User")} className="text-green-500 p-1 hover:bg-green-500/20 rounded">
+                                                        <button onClick={() => handleUpdateNickname(mId)} className="text-green-500 p-1 hover:bg-green-500/20 rounded">
                                                             <Check className="w-3 h-3" />
                                                         </button>
                                                         <button onClick={() => setEditingNicknameId(null)} className="text-muted-foreground p-1 hover:bg-muted rounded">
