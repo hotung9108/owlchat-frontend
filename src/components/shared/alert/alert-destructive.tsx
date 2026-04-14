@@ -1,5 +1,5 @@
 import { AlertCircleIcon } from "lucide-react"
-import { CustomAlert } from "../custom-alert"
+import { CustomAlert } from "./custom-alert"
 export function AlertDestructive() {
   return (
     <CustomAlert

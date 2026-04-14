@@ -17,12 +17,16 @@ export default function FriendList() {
         friend.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const handleSearch = (query: string) => {
+        setSearchTerm(query);
+    };
+
     return (
         <div className="flex flex-col p-4">
-            <FriendSearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+            <FriendSearchBar onSearch={handleSearch} />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                 {filteredFriends.map(friend => (
-                    <FriendCard key={friend.id} friend={friend} />
+                    <FriendCard key={friend.id} name={friend.name} avatarUrl={''} onClick={() => {}} />
                 ))}
             </div>
         </div>

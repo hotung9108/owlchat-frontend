@@ -35,8 +35,7 @@ import {
 import {
   User, Mail, Phone, Calendar, Shield, Users, UserPlus,
   Ban, MessageSquare, Clock, CheckCircle2, XCircle, AlertCircle,
-  Pencil, PowerOff, Power, Upload,
-  Plus
+  Pencil, PowerOff, Power, Upload
 } from "lucide-react"
 import { format } from "date-fns"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
@@ -57,13 +56,6 @@ type UserProfile = {
   updated_date: string
 }
 
-type Friendship = {
-  id: string
-  first_user_id: string; first_user_name: string; first_user_avatar: string
-  second_user_id: string; second_user_name: string; second_user_avatar: string
-  created_date: string
-}
-
 type FriendRequest = {
   id: string
   sender_id: string; sender_name: string; sender_avatar: string
@@ -72,12 +64,6 @@ type FriendRequest = {
   created_date: string; updated_date: string
 }
 
-type Block = {
-  id: string
-  blocker_id: string; blocker_name: string; blocker_avatar: string
-  blocked_id: string; blocked_name: string; blocked_avatar: string
-  created_date: string
-}
 
 type Chat = {
   id: string; status: boolean; type: "PRIVATE" | "GROUP"

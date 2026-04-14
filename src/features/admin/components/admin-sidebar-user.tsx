@@ -4,7 +4,6 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar"
 import type { UserInfor } from "../configs/admin-sidebar.config"
-import { useNavigate } from "react-router-dom"
 
 interface Props {
     user_infor: UserInfor,

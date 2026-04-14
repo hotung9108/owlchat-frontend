@@ -108,7 +108,7 @@ export default function ProfileDetailPage() {
             <div className="-mt-[3.5rem] relative z-20 shrink-0">
                 <div className="relative inline-block">
                     <Avatar className="h-[140px] w-[140px] rounded-full border-[6px] border-background shadow-md bg-white">
-                        <AvatarImage src={profile?.avatar} className="object-cover" />
+                        <AvatarImage src={profile?.avatar ?? undefined} className="object-cover" />
                         <AvatarFallback className="text-xl font-bold">{getInitials()}</AvatarFallback>
                     </Avatar>
                     <span className="absolute bottom-3 right-3 h-7 w-7 rounded-full border-[4px] border-background bg-green-500 shadow-sm"></span>

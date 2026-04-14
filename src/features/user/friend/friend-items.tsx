@@ -1,7 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { User } from "lucide-react";
-import { Link } from "react-router-dom";
 
 type Props = {
     id: string;

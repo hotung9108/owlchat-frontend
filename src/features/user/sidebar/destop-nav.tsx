@@ -14,7 +14,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNotification } from "@/hooks/use-notification";
 import { MessageSquare, UserPlus, Users, ShieldBan, Bell, CheckCheck } from "lucide-react";
 
