@@ -7,7 +7,7 @@ import { useLocation, useNavigate } from "react-router-dom"
 import type { SidebarGroup, UserInfor } from "../configs/admin-sidebar.config";
 import AdminSidebarUser from "./admin-sidebar-user";
 import { Button } from "@/components/ui/button";
-import { LogOut, Moon, Sun } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { useUserProfileContext } from "@/providers/user-profile-provider";
 

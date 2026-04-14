@@ -7,9 +7,7 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 // import FriendCard from "./FriendCard";
 import FriendCard from "./friend-listfriend-card";
 
-type Props = {};
-
-export default function FriendListFriendPage(props: Props) {
+export default function FriendListFriendPage() {
     const {
         profile,
         fetchUserProfile,

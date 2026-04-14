@@ -1,6 +1,5 @@
 import React from "react";
 import { useThemeColorStore, type ThemeColor } from "@/stores/theme-color.store.tsx";
-import { Card } from "@/components/ui/card";
 import owlLogo from "@/assets/owl-logo/black/owl-512.png";
 import ChatFullView from "../chat-fullview";
 

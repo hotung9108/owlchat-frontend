@@ -8,9 +8,7 @@ import LoadingLogo from "@/components/shared/loading-logo";
 import FriendRequestCard from "./friend-addfriend-card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type Props = {};
-
-export default function FriendAddFriendPage(props: Props) {
+export default function FriendAddFriendPage() {
     const {
         getReceiveFriendRequests,
         getSendFriendRequests,

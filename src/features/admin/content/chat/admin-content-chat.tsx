@@ -171,7 +171,6 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
     const [chat, setChat] = useState<Chat | null>(null)
     const [members, setMembers] = useState<ChatMember[]>([])
     const [messages, setMessages] = useState<Message[]>([])
-    const [toggleOpen, setToggleOpen] = useState(false)
     const [activeTab, setActiveTab] = useState("members")
     const [membersLoaded, setMembersLoaded] = useState(false)
     const [messagesLoaded, setMessagesLoaded] = useState(false)

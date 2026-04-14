@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { messageUserService } from "@/services/message-user-service";
 import type {
-    FileMessageUserRequest,
     MessageUpdateContentRequest,
     TextMessageUserRequest,
-    ResourceData,
 } from "@/types/message.type";
 
 export const useMessageUser = () => {

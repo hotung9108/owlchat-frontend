@@ -37,7 +37,6 @@ import { format } from "date-fns"
 import type { DateRange } from "react-day-picker"
 import { useNavigate as AppRoute } from "react-router-dom"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
-import { useUserProfile } from "@/hooks/use-user-profile"
 
 // ── Types & Component ─────────────────────────────────────────────────────────
 
@@ -115,25 +114,6 @@ export default function UsersManager() {
 
 
   const [avatarError, setAvatarError] = useState("")
-
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 25 * 1024 * 1024) {
-      alert("Image must be under 25MB");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setCreateForm(f => ({
-        ...f,
-        avatar: ev.target?.result as string,
-      }));
-    };
-    reader.readAsDataURL(file);
-  };
 
   const handleCreateUser = async () => {
     if (!createForm.username || !createForm.password || !createForm.email) {

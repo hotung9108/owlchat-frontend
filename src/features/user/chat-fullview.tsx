@@ -1,5 +1,4 @@
 import { Card } from "@/components/ui/card";
-import owlLogo from "@/assets/owl-logo/black/owl-512.png";
 type Props = React.PropsWithChildren<{}>;
 
 export default function ChatFullView({children}: Props) {

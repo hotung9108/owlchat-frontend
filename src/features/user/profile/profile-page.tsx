@@ -8,7 +8,6 @@ import type { UserProfile } from "@/types/user-profile.type";
 export default function ProfilePage() {
   const { fetchUserProfile } = useUserProfile();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -17,8 +16,6 @@ export default function ProfilePage() {
         setProfile(data || null);
       } catch (error) {
         console.error("Failed to load profile:", error);
-      } finally {
-        setLoading(false);
       }
     };
     loadProfile();

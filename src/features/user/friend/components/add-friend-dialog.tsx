@@ -1,5 +1,4 @@
-type Props = {}
-export default function AddFriendDialog(prop: Props){
+export default function AddFriendDialog(){
     return(
         <div>
             AddFriendDiaglog

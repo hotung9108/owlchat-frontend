@@ -35,7 +35,7 @@ export default function ConversationDetailPage() {
         softDeleteMessage,
     } = useMessageUser();
     
-    const { subscribeToTopic, isConnected } = useWebSocket();
+    const { subscribeToTopic } = useWebSocket();
     
     const { profile, fetchUserProfile, fetchProfileById } = useUserProfile();
     const { getChatByChatId } = useChatUser();

@@ -19,30 +19,6 @@ import { useNavigate } from "react-router-dom";
 type MessageType  = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE"
 type MessageState = "ORIGIN" | "EDITED" | "REMOVED"
 
-function Clickable({
-  onClick,
-  children,
-  className = "",
-}: {
-  onClick: () => void;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <span
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") onClick();
-      }}
-      className={`cursor-pointer transition ${className}`}
-    >
-      {children}
-    </span>
-  );
-}
-
 type Message = {
   id: string
   chat_id: string
