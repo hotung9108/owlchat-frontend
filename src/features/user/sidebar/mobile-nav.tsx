@@ -35,7 +35,8 @@ export default function MobileNav() {
     const handleLogout = async () => {
         try {
             await logout();
-            window.location.href = "/login";
+            navigate("/login");
+            // window.location.href = "/login";
         } catch (error) {
             console.error("Logout failed:", error);
         }
