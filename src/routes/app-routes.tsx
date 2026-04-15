@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuthLogoutListener } from "@/hooks/use-auth-logout-listener";
 import LoginPage from "@/features/auth/pages/login-page";
 import RegisterPage from "@/features/auth/pages/register-page";
 import ConversationPage from "@/features/user/conversation/conversation-page";
@@ -25,6 +26,9 @@ import PinCodePage from "@/features/auth/pages/account-authenticate-page";
 import AdminContentMessageReports from "@/features/admin/content/analysis/admin-content-message-reports";
 
 const AppRoutes = () => {
+    // Listen for auth logout events from axios interceptor
+    useAuthLogoutListener();
+    
     return (
         <Routes>
             <Route path="/conversations" element={<ConversationPage />} />

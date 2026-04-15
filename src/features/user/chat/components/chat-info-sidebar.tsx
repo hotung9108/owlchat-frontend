@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import UserAvatar from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ const ROLE_RANK = {
 };
 
 export default function ChatInfoSidebar({ type, conversationId, currentUserId, onClose }: ChatInfoSidebarProps) {
+    const navigate = useNavigate();
     const [members, setMembers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingNicknameId, setEditingNicknameId] = useState<string | null>(null);
@@ -94,8 +96,8 @@ export default function ChatInfoSidebar({ type, conversationId, currentUserId, o
         if (!window.confirm("Are you sure you want to leave this chat?")) return;
         try {
             await deleteChatMember(null, null, targetId, conversationId);
-            // Optionally redirect user here, but typically socket handles removal or parent detects it
-            window.location.href = "/conversations";
+            // Redirect user after leaving chat
+            navigate("/conversations");
         } catch (error) {
             console.error("Failed to leave chat:", error);
         }
