@@ -285,7 +285,9 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                         </div>
                                     ) : (
                                         <p className="whitespace-pre-wrap leading-relaxed">
-                                            {message.content}
+                                            {isMe && "... "}
+                                            {message.content.length > 50 ? message.content.substring(0, 50) + "..." : message.content}
+                                            {!isMe && " ..."}
                                             {isEdited && (
                                                 <span className="text-[10px] opacity-40 ml-2 italic font-semibold">(đã chỉnh sửa)</span>
                                             )}
