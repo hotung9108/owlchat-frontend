@@ -163,12 +163,32 @@ export default function ConversationDetailPage() {
                 
                 // Handle different notification types
                 if (notification?.type === "MESSAGE" && notification?.action === "CREATED") {
-                    // NEW MESSAGE - Add directly to UI (at the beginning)
+                    // NEW MESSAGE - Replace optimistic message or add if new
                     const transformedMessage = websocketMessageService.transformWebSocketMessage(
                         notification.data
                     );
-                    setMessages((prev) => [transformedMessage, ...prev]);
-                    console.log("[WebSocket] ✓ Message added to UI directly");
+                    
+                    setMessages((prev) => {
+                        // Check if optimistic message already exists (with same content/sender)
+                        const optimisticIndex = prev.findIndex(
+                            (msg) => msg.type === "TEXT" && 
+                                   msg.content === transformedMessage.content &&
+                                   msg.senderId === transformedMessage.senderId &&
+                                   msg.id.startsWith("temp-")
+                        );
+                        
+                        if (optimisticIndex !== -1) {
+                            // Replace optimistic message with real one
+                            const updated = [...prev];
+                            updated[optimisticIndex] = transformedMessage;
+                            console.log("[WebSocket] ✓ Optimistic message replaced with real ID");
+                            return updated;
+                        } else {
+                            // New message from another user or refresh - add it
+                            console.log("[WebSocket] ✓ New message added to UI");
+                            return [transformedMessage, ...prev];
+                        }
+                    });
                 } else if (notification?.type === "MESSAGE" && notification?.action === "UPDATED") {
                     // EDITED MESSAGE - Update in place
                     setMessages((prev) =>
@@ -248,17 +268,12 @@ export default function ConversationDetailPage() {
         }
 
         try {
-            // 1. Send via WebSocket immediately (real-time)
-            websocketMessageService.sendViaWebSocket(
-                sendMessage,
-                conversationId!,
-                message,
-                profile.id
-            );
-
-            // 2. Add to UI optimistically
+            // Create temp ID for optimistic message
+            const tempId = `temp-${Date.now()}-${Math.random()}`;
+            
+            // Create optimistic message before sending
             const optimisticMessage = {
-                id: `temp-${Date.now()}`,
+                id: tempId,
                 chatId: conversationId!,
                 content: message,
                 senderId: profile.id,
@@ -267,15 +282,19 @@ export default function ConversationDetailPage() {
                 state: "ORIGIN",
                 type: "TEXT",
             };
+            
+            // Add to UI first (optimistic)
             setMessages((prev) => [optimisticMessage, ...prev]);
 
-            // 3. Save to DB asynchronously (fire & forget)
-            websocketMessageService.saveMessageAsync(null, null, {
-                chatId: conversationId!,
-                content: message,
-            });
+            // Send via WebSocket - server will broadcast back and replace temp message
+            websocketMessageService.sendViaWebSocket(
+                sendMessage,
+                conversationId!,
+                message,
+                profile.id
+            );
 
-            console.log("[Chat] ✓ Message sent via WebSocket + async save scheduled");
+            console.log("[Chat] ✓ Message sent via WebSocket (optimistic ID: " + tempId + ")");
         } catch (err) {
             console.error("Failed to send message:", err);
         }
