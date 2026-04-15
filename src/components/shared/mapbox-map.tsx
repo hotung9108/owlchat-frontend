@@ -41,6 +41,13 @@ export const MapboxMap = React.forwardRef<HTMLDivElement, MapboxMapProps>(
         useEffect(() => {
             const initMap = async () => {
                 try {
+                    // Check if token is available
+                    if (!MAPBOX_CONFIG.TOKEN) {
+                        setError('Mapbox token is not configured. Check your environment variables.');
+                        setIsLoading(false);
+                        return;
+                    }
+
                     const mapboxgl = await loadMapboxGL();
                     mapboxgl.accessToken = MAPBOX_CONFIG.TOKEN;
 
@@ -84,7 +91,7 @@ export const MapboxMap = React.forwardRef<HTMLDivElement, MapboxMapProps>(
 
                     setIsLoading(false);
                 } catch (err) {
-                    setError('Failed to load map. Check Mapbox token.');
+                    setError('Failed to load map. Check Mapbox token and network connection.');
                     console.error('Mapbox initialization error:', err);
                     setIsLoading(false);
                 }
@@ -162,10 +169,10 @@ export const MapboxMap = React.forwardRef<HTMLDivElement, MapboxMapProps>(
         }
 
         return (
-            <div ref={ref || mapContainer} className="w-full h-full rounded-lg overflow-hidden">
+            <div ref={ref} className="w-full h-full rounded-lg overflow-hidden relative">
                 <div ref={mapContainer} className="w-full h-full" />
                 {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none">
                         <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     </div>
                 )}
