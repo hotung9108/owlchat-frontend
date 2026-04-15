@@ -111,6 +111,31 @@ export const MapboxMap = React.forwardRef<HTMLDivElement, MapboxMapProps>(
                         zoom: MAPBOX_CONFIG.INITIAL_ZOOM,
                     });
 
+                    // Wait for map to load, then resize to ensure it renders properly
+                    map.current.once('load', () => {
+                        console.log('Map load event fired, triggering resize');
+                        // Force map to resize to fit container
+                        setTimeout(() => {
+                            if (map.current) {
+                                map.current.resize();
+                                console.log('Map resized and ready');
+                                const container = map.current.getContainer();
+                                console.log('Map container info:', {
+                                    offsetWidth: container.offsetWidth,
+                                    offsetHeight: container.offsetHeight,
+                                    clientWidth: container.clientWidth,
+                                    clientHeight: container.clientHeight,
+                                    display: window.getComputedStyle(container).display
+                                });
+                            }
+                        }, 100);
+                    });
+
+                    // Add error handler
+                    map.current.on('error', (e: any) => {
+                        console.error('Map error event:', e);
+                    });
+
                     // Add controls
                     map.current.addControl(new mapboxgl.NavigationControl());
                     map.current.addControl(new mapboxgl.FullscreenControl());
@@ -215,15 +240,28 @@ export const MapboxMap = React.forwardRef<HTMLDivElement, MapboxMapProps>(
         }
 
         return (
-            <div ref={ref} className="w-full h-full rounded-lg overflow-hidden relative">
-                <div ref={mapContainer} className="w-full h-full" />
+            <div ref={ref} className="w-full h-full rounded-lg overflow-hidden relative" style={{ minHeight: '400px' }}>
+                <div 
+                    ref={mapContainer} 
+                    className="w-full h-full" 
+                    style={{ 
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: '#f5f5f5'
+                    }} 
+                />
                 {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none z-10">
                         <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     </div>
                 )}
                 {currentLocation && allowSelection && (
-                    <div className="absolute bottom-4 left-4 bg-white dark:bg-slate-900 p-3 rounded-lg shadow-lg max-w-xs">
+                    <div className="absolute bottom-4 left-4 bg-white dark:bg-slate-900 p-3 rounded-lg shadow-lg max-w-xs z-20">
                         <p className="text-xs font-semibold text-foreground mb-1">📍 Location Selected</p>
                         <p className="text-xs text-muted-foreground">
                             {currentLocation.address || `${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)}`}
