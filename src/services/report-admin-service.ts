@@ -7,6 +7,7 @@ import type {
   ReportResponse,
   ReportListResponse,
 } from "@/types/chat-report.type";
+import type { MessageReportsStatsResponse, MessageReportsTotalResponse } from "@/types/admin-stats.type";
 
 const REPORT_BASE_URL = `${API_ENDPOINTS.CHAT_SERVICE}/admin/report`;
 
@@ -59,3 +60,14 @@ export async function patchReportContent(
   );
   return response.data;
 }
+
+
+export const reportAdminService = {
+  getStats: (from?: string, to?: string) =>
+    apiClient.get<MessageReportsStatsResponse>(`${REPORT_BASE_URL}/stats`, {
+      params: { from, to },
+    }),
+
+  getTotal: () =>
+    apiClient.get<MessageReportsTotalResponse>(`${REPORT_BASE_URL}/stats/total`),
+};
