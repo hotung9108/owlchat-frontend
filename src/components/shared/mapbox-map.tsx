@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState} from 'react';
 import { MAPBOX_CONFIG, type LocationData } from '@/config/mapbox';
 import { MapPin } from 'lucide-react';
 
