@@ -13,7 +13,7 @@ const loadMapboxGL = async () => {
     document.head.appendChild(cssLink);
     
     // Load JS
-    return new Promise<any>((resolve, reject) => {
+return new Promise<any>((resolve, reject) => {
         const script = document.createElement('script');
         script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.js';
         script.onload = () => resolve((window as any).mapboxgl);
