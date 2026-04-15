@@ -6,18 +6,26 @@ import { MapPin } from 'lucide-react';
 const loadMapboxGL = async () => {
     if ((window as any).mapboxgl) return (window as any).mapboxgl;
     
-    // Load CSS
-    const cssLink = document.createElement('link');
-    cssLink.href = 'https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.css';
-    cssLink.rel = 'stylesheet';
-    document.head.appendChild(cssLink);
-    
-    // Load JS
-return new Promise<any>((resolve, reject) => {
+    return new Promise<any>((resolve, reject) => {
+        // Load CSS
+        const cssLink = document.createElement('link');
+        cssLink.href = 'https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.css';
+        cssLink.rel = 'stylesheet';
+        cssLink.onerror = () => reject(new Error('Failed to load Mapbox CSS'));
+        document.head.appendChild(cssLink);
+        
+        // Load JS
         const script = document.createElement('script');
         script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.js';
-        script.onload = () => resolve((window as any).mapboxgl);
-        script.onerror = reject;
+        script.async = true;
+        script.onload = () => {
+            if ((window as any).mapboxgl) {
+                resolve((window as any).mapboxgl);
+            } else {
+                reject(new Error('Mapbox GL JS not available after script load'));
+            }
+        };
+        script.onerror = () => reject(new Error('Failed to load Mapbox GL JS script from CDN'));
         document.head.appendChild(script);
     });
 };
@@ -39,19 +47,36 @@ export const MapboxMap = React.forwardRef<HTMLDivElement, MapboxMapProps>(
 
         // Initialize map
         useEffect(() => {
+            if (!mapContainer.current) return;
+            
             const initMap = async () => {
                 try {
                     // Check if token is available
                     if (!MAPBOX_CONFIG.TOKEN) {
-                        setError('Mapbox token is not configured. Check your environment variables.');
+                        console.error('Mapbox token is missing:', { TOKEN: MAPBOX_CONFIG.TOKEN });
+                        setError('Mapbox token is not configured. Check VITE_MAPBOX_TOKEN environment variable.');
                         setIsLoading(false);
                         return;
                     }
 
+                    console.log('Loading Mapbox GL...');
                     const mapboxgl = await loadMapboxGL();
+                    console.log('Mapbox GL loaded successfully');
+                    
                     mapboxgl.accessToken = MAPBOX_CONFIG.TOKEN;
 
-                    if (!mapContainer.current) return;
+                    if (!mapContainer.current) {
+                        console.error('Map container not found');
+                        return;
+                    }
+
+                    console.log('Creating map with config:', {
+                        center: initialLocation 
+                            ? [initialLocation.longitude, initialLocation.latitude]
+                            : [MAPBOX_CONFIG.INITIAL_CENTER.lng, MAPBOX_CONFIG.INITIAL_CENTER.lat],
+                        zoom: MAPBOX_CONFIG.INITIAL_ZOOM,
+                        style: MAPBOX_CONFIG.STYLE
+                    });
 
                     // Create map
                     map.current = new mapboxgl.Map({
@@ -77,22 +102,65 @@ export const MapboxMap = React.forwardRef<HTMLDivElement, MapboxMapProps>(
 
                     // Add marker if location provided
                     if (initialLocation) {
-                        addMarker(
-                            initialLocation.latitude,
-                            initialLocation.longitude,
-                            mapboxgl
-                        );
+                        const el = document.createElement('div');
+                        el.className = 'w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg cursor-pointer';
+                        el.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z'/%3E%3C/svg%3E")`;
+                        el.style.backgroundSize = 'contain';
+                        
+                        marker.current = new mapboxgl.Marker(el)
+                            .setLngLat([initialLocation.longitude, initialLocation.latitude])
+                            .addTo(map.current);
                     }
 
                     // Handle map click for location selection
                     if (allowSelection) {
-                        map.current.on('click', handleMapClick);
+                        map.current.on('click', async (e: any) => {
+                            const { lng, lat } = e.lngLat;
+                            const location: LocationData = {
+                                latitude: lat,
+                                longitude: lng,
+                                timestamp: Date.now(),
+                            };
+
+                            // Try to get address using reverse geocoding
+                            try {
+                                const response = await fetch(
+                                    `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_CONFIG.TOKEN}`
+                                );
+                                const data = await response.json();
+                                if (data.features?.[0]) {
+                                    location.address = data.features[0].place_name;
+                                }
+                            } catch (err) {
+                                console.error('Reverse geocoding error:', err);
+                            }
+
+                            setCurrentLocation(location);
+                            
+                            // Remove existing marker
+                            if (marker.current) {
+                                marker.current.remove();
+                            }
+
+                            // Create new marker
+                            const newEl = document.createElement('div');
+                            newEl.className = 'w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg cursor-pointer';
+                            newEl.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z'/%3E%3C/svg%3E")`;
+                            newEl.style.backgroundSize = 'contain';
+
+                            marker.current = new mapboxgl.Marker(newEl)
+                                .setLngLat([lng, lat])
+                                .addTo(map.current);
+                            
+                            onLocationSelect?.(location);
+                        });
                     }
 
+                    console.log('Map initialized successfully');
                     setIsLoading(false);
-                } catch (err) {
-                    setError('Failed to load map. Check Mapbox token and network connection.');
-                    console.error('Mapbox initialization error:', err);
+                } catch (err: any) {
+                    console.error('Mapbox initialization failed:', err);
+                    setError(`Failed to load map: ${err.message || 'Unknown error'}`);
                     setIsLoading(false);
                 }
             };
@@ -101,61 +169,16 @@ export const MapboxMap = React.forwardRef<HTMLDivElement, MapboxMapProps>(
 
             return () => {
                 if (map.current) {
-                    map.current.off('click', handleMapClick);
+                    map.current.remove();
+                    map.current = null;
                 }
-            };
-        }, []);
-
-        const addMarker = useCallback(
-            (lat: number, lng: number, mapboxgl: any) => {
-                // Remove existing marker
                 if (marker.current) {
                     marker.current.remove();
+                    marker.current = null;
                 }
+            };
+        }, [allowSelection, onLocationSelect, initialLocation]);
 
-                // Create new marker
-                const el = document.createElement('div');
-                el.className = 'w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg cursor-pointer';
-                el.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z'/%3E%3C/svg%3E")`;
-                el.style.backgroundSize = 'contain';
-
-                marker.current = new mapboxgl.Marker(el)
-                    .setLngLat([lng, lat])
-                    .addTo(map.current);
-            },
-            []
-        );
-
-        const handleMapClick = useCallback(
-            async (e: any) => {
-                if (!allowSelection) return;
-
-                const { lng, lat } = e.lngLat;
-                const location: LocationData = {
-                    latitude: lat,
-                    longitude: lng,
-                    timestamp: Date.now(),
-                };
-
-                // Try to get address using reverse geocoding
-                try {
-                    const response = await fetch(
-                        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_CONFIG.TOKEN}`
-                    );
-                    const data = await response.json();
-                    if (data.features?.[0]) {
-                        location.address = data.features[0].place_name;
-                    }
-                } catch (err) {
-                    console.error('Reverse geocoding error:', err);
-                }
-
-                setCurrentLocation(location);
-                addMarker(lat, lng, (window as any).mapboxgl);
-                onLocationSelect?.(location);
-            },
-            [allowSelection, onLocationSelect, addMarker]
-        );
 
         if (error) {
             return (
