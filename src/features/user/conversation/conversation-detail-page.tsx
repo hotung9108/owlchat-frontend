@@ -12,6 +12,7 @@ import { useChatUser } from "@/hooks/use-chat-user";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { useWebSocket } from "@/providers/websocket-provider";
 import type { MessageType } from "@/types/enum/mesage-type";
+import { websocketMessageService } from "@/services/websocket-message-service";
 
 export default function ConversationDetailPage() {
     const chatBodyRef = useRef<HTMLDivElement>(null);
@@ -27,6 +28,7 @@ export default function ConversationDetailPage() {
     const { conversationId } = useParams();
     const {
         messages,
+        setMessages,
         loading,
         getMessagesByChatId,
         postNewTextMessage,
@@ -35,7 +37,7 @@ export default function ConversationDetailPage() {
         softDeleteMessage,
     } = useMessageUser();
     
-    const { subscribeToTopic } = useWebSocket();
+    const { subscribeToTopic, sendMessage } = useWebSocket();
     
     const { profile, fetchUserProfile, fetchProfileById } = useUserProfile();
     const { getChatByChatId } = useChatUser();
@@ -147,6 +149,7 @@ export default function ConversationDetailPage() {
     }, [conversationId, getMessagesByChatId]);
 
     // Subscribe to WebSocket for real-time messages - Setup once per conversation
+    // Optimized: Add messages directly to UI instead of reloading page 0
     useEffect(() => {
         if (!conversationId) return;
         
@@ -157,17 +160,43 @@ export default function ConversationDetailPage() {
         const setupSubscription = () => {
             const destination = `/topic/chat.${conversationId}`;
             subscription = subscribeToTopic(destination, (notification: any) => {
-                console.log("New real-time message notification:", notification);
-                // Re-fetch page 0 to instantly show new messages/edits/deletes
-                const size = 20;
-                getMessagesByChatId(
-                    null,
-                    null,
-                    conversationId,
-                    "",
-                    0,
-                    size,
-                ).catch((error) => console.debug("Real-time refresh messages error:", error));
+                console.log("[WebSocket] Message notification received:", notification);
+                
+                // Handle different notification types
+                if (notification?.type === "MESSAGE" && notification?.action === "CREATED") {
+                    // NEW MESSAGE - Add directly to UI (at the beginning)
+                    const transformedMessage = websocketMessageService.transformWebSocketMessage(
+                        notification.data
+                    );
+                    setMessages((prev) => [transformedMessage, ...prev]);
+                    console.log("[WebSocket] ✓ Message added to UI directly");
+                } else if (notification?.type === "MESSAGE" && notification?.action === "UPDATED") {
+                    // EDITED MESSAGE - Update in place
+                    setMessages((prev) =>
+                        prev.map((msg) =>
+                            msg.id === notification.data.id
+                                ? websocketMessageService.transformWebSocketMessage(notification.data)
+                                : msg
+                        )
+                    );
+                    console.log("[WebSocket] ✓ Message updated in UI");
+                } else if (notification?.type === "MESSAGE" && notification?.action === "DELETED") {
+                    // DELETED MESSAGE - Mark as removed
+                    setMessages((prev) =>
+                        prev.map((msg) =>
+                            msg.id === notification.data.id
+                                ? { ...msg, state: "REMOVED", content: null }
+                                : msg
+                        )
+                    );
+                    console.log("[WebSocket] ✓ Message marked as deleted");
+                } else {
+                    // Fallback: Re-fetch page 0 for unknown notifications
+                    console.log("[WebSocket] Unknown notification type, refreshing messages...");
+                    getMessagesByChatId(null, null, conversationId, "", 0, 20).catch(
+                        (error) => console.debug("Real-time refresh error:", error)
+                    );
+                }
             });
             
             console.log("WebSocket subscription setup for:", destination);
@@ -214,11 +243,40 @@ export default function ConversationDetailPage() {
     };
 
     const handleSendMessage = async (message: string) => {
+        if (!profile?.id) {
+            console.error("User profile not loaded");
+            return;
+        }
+
         try {
-            await postNewTextMessage(null, null, {
+            // 1. Send via WebSocket immediately (real-time)
+            websocketMessageService.sendViaWebSocket(
+                sendMessage,
+                conversationId!,
+                message,
+                profile.id
+            );
+
+            // 2. Add to UI optimistically
+            const optimisticMessage = {
+                id: `temp-${Date.now()}`,
+                chatId: conversationId!,
+                content: message,
+                senderId: profile.id,
+                sentDate: new Date().toISOString(),
+                createdDate: new Date().toISOString(),
+                state: "ORIGIN",
+                type: "TEXT",
+            };
+            setMessages((prev) => [optimisticMessage, ...prev]);
+
+            // 3. Save to DB asynchronously (fire & forget)
+            websocketMessageService.saveMessageAsync(null, null, {
                 chatId: conversationId!,
                 content: message,
             });
+
+            console.log("[Chat] ✓ Message sent via WebSocket + async save scheduled");
         } catch (err) {
             console.error("Failed to send message:", err);
         }
