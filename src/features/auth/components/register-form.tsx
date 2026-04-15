@@ -43,9 +43,11 @@ export function RegisterForm({
 
         setLoading(true);
         try {
-            const response = await authService.signup({ email, username, password });
-            const accountId = response?.id;
-            navigate("/authenticate", { state: { accountId, email } });
+            // const response = await authService.signup({ email, username, password });
+            await authService.signup({ email, username, password });
+            // const accountId = response?.id;
+            // navigate("/authenticate", { state: { accountId, email } });
+            navigate("/login")
         } catch (err: any) {
             const message =
                 err?.response?.data?.message ??

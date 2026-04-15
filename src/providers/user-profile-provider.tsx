@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { createContext, useContext, useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useUserProfile as useUserProfileHook } from "@/hooks/use-user-profile";
 import type { UserProfile } from "@/types/user-profile.type";
 
@@ -9,11 +9,15 @@ interface UserProfileContextType {
   refreshProfile: () => Promise<void>;
   fetchProfileById: (id: string) => Promise<UserProfile | undefined | null>;
   clearProfileCache: (id?: string) => void;
+  remount: () => void;
 }
 
 const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
 
-export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const UserProfileProviderInternal: React.FC<{ children: React.ReactNode; remount: () => void }> = ({ 
+  children,
+  remount 
+}) => {
   const { profile, loading, error, fetchUserProfile, fetchProfileById, clearProfileCache } = useUserProfileHook();
   const isInitialMount = useRef(true);
 
@@ -41,7 +45,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         refreshProfile();
       }
     }
-  }, [refreshProfile]); // Include refreshProfile in deps
+  }, [refreshProfile]);
 
   // 3. Listen for logout - clear cache when accessToken is removed
   useEffect(() => {
@@ -64,12 +68,24 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     refreshProfile,
     fetchProfileById,
     clearProfileCache,
-  }), [profile, loading, error, refreshProfile, fetchProfileById, clearProfileCache]);
+    remount,
+  }), [profile, loading, error, refreshProfile, fetchProfileById, clearProfileCache, remount]);
 
   return (
     <UserProfileContext.Provider value={value}>
       {children}
     </UserProfileContext.Provider>
+  );
+};
+
+export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [key, setKey] = useState(0);
+  const remount = useCallback(() => setKey(prev => prev + 1), []);
+
+  return (
+    <UserProfileProviderInternal key={key} remount={remount}>
+      {children}
+    </UserProfileProviderInternal>
   );
 };
 

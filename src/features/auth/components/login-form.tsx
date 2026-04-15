@@ -14,6 +14,8 @@ import { useState } from "react";
 import { useAuth } from "../../../hooks/use-auth";
 import { CheckCircle2Icon, AlertCircleIcon } from "lucide-react";
 import { CustomAlert } from "@/components/shared/alert/custom-alert";
+import { useUserProfileContext } from "@/providers/user-profile-provider";
+import { useWebSocket } from "@/providers/websocket-provider";
 
 export interface LoginFormProps extends React.ComponentProps<"div"> {
     navigateUrl?: string;
@@ -37,6 +39,8 @@ export function LoginForm({
     const [password, setPassword] = useState<string>("");
     const [showAlert, setShowAlert] = useState<boolean>(false);
     const { login } = useAuth();
+    const { remount: remountProfile } = useUserProfileContext();
+    const { remount: remountSocket } = useWebSocket();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -47,15 +51,17 @@ export function LoginForm({
             setShowAlert(true);
             setTimeout(() => {
                 setShowAlert(false);
+                
+                // Force providers to remount to pick up the new token
+                remountProfile();
+                remountSocket();
+
                 // Redirect based on role from response
                 if (response.role === "ADMIN") {
-                    // window.location.href = "/admin";
                     navigate("/admin");
                 } else if (response.role === "USER" || response.role === "BUSINESS") {
-                    // window.location.href = "/conversations";
                     navigate("/conversations");
                 } else {
-                    // window.location.href = navigateUrl;
                     navigate(navigateUrl);
                 }
             }, 2000);

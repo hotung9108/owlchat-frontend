@@ -5,11 +5,15 @@ interface WebSocketContextProps {
   sendMessage: (destination: string, body: any) => void;
   subscribeToTopic: (destination: string, callback: (message: any) => void) => any;
   isConnected: boolean;
+  remount: () => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextProps | null>(null);
 
-export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const WebSocketProviderInternal: React.FC<{ children: React.ReactNode; remount: () => void }> = ({ 
+  children,
+  remount
+}) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
@@ -39,9 +43,20 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   return (
-    <WebSocketContext.Provider value={{ sendMessage, subscribeToTopic, isConnected }}>
+    <WebSocketContext.Provider value={{ sendMessage, subscribeToTopic, isConnected, remount }}>
       {children}
     </WebSocketContext.Provider>
+  );
+};
+
+export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [key, setKey] = useState(0);
+  const remount = useCallback(() => setKey(prev => prev + 1), []);
+
+  return (
+    <WebSocketProviderInternal key={key} remount={remount}>
+      {children}
+    </WebSocketProviderInternal>
   );
 };
 
