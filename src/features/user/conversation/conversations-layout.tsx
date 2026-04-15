@@ -9,6 +9,7 @@ import { useChatUser } from "@/hooks/use-chat-user";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useUserProfileContext } from "@/providers/user-profile-provider";
+import { useWebSocket } from "@/providers/websocket-provider";
 
 type Props = React.PropsWithChildren<{}>;
 
@@ -30,6 +31,7 @@ export default function ConversationsLayout({ children }: Props) {
     const { getChatMembersByChatId } = useChatMemberUser();
     const { fetchProfileById } = useUserProfile();
     const { profile } = useUserProfileContext();
+    const { subscribeToTopic } = useWebSocket();
 
     const fetchConversationsData = async () => {
         try {
@@ -92,8 +94,49 @@ export default function ConversationsLayout({ children }: Props) {
         fetchConversationsData();
     }, [getChatsByMemberId, getChatMembersByChatId, fetchProfileById, profile?.id]);
 
-    // Auto-refresh conversations loop has been removed to prevent backend DDoS.
-    // Real-time updates should ideally use WebSockets instead of short-polling here.
+    // Listen for realtime message updates and move conversation to top
+    useEffect(() => {
+        if (!conversations || conversations.length === 0) return;
+
+        const subscriptions: any[] = [];
+
+        // Subscribe to each conversation's topic to listen for new messages
+        conversations.forEach((chat) => {
+            const destination = `/topic/chat.${chat.id}`;
+            const subscription = subscribeToTopic(destination, (notification: any) => {
+                console.log(`[Sidebar] Message notification for chat ${chat.id}:`, notification);
+                
+                // When a message is created in any chat, move that conversation to top
+                if (notification?.type === "MESSAGE" && notification?.action === "CREATED") {
+                    setConversations((prev) => {
+                        if (!prev) return prev;
+                        
+                        // Find the chat that received the message
+                        const chatIndex = prev.findIndex((c) => c.id === chat.id);
+                        if (chatIndex === -1) return prev;
+                        
+                        // Move conversation to top (index 0)
+                        const updated = [...prev];
+                        const [movedChat] = updated.splice(chatIndex, 1);
+                        movedChat.newestMessageId = notification.data?.id;
+                        updated.unshift(movedChat);
+                        
+                        console.log(`[Sidebar] ✓ Moved chat ${chat.id} to top`);
+                        return updated;
+                    });
+                }
+            });
+            
+            subscriptions.push(subscription);
+        });
+
+        // Cleanup subscriptions when component unmounts or conversations change
+        return () => {
+            subscriptions.forEach((sub) => {
+                if (sub) sub.unsubscribe();
+            });
+        };
+    }, [conversations, subscribeToTopic]);
 
     // Filter conversations based on search query
     useEffect(() => {
