@@ -2,16 +2,38 @@ import React, { useEffect, useRef, useState} from 'react';
 import { MAPBOX_CONFIG, type LocationData } from '@/config/mapbox';
 import { MapPin } from 'lucide-react';
 
-// Dynamically load Mapbox GL JS
+// Dynamically load Mapbox GL JS and CSS
 const loadMapboxGL = async () => {
     if ((window as any).mapboxgl) return (window as any).mapboxgl;
     
     return new Promise<any>((resolve, reject) => {
+        let cssLoaded = false;
+        let jsLoaded = false;
+        
+        const checkBothLoaded = () => {
+            if (cssLoaded && jsLoaded) {
+                if ((window as any).mapboxgl) {
+                    resolve((window as any).mapboxgl);
+                } else {
+                    reject(new Error('Mapbox GL JS not available after script load'));
+                }
+            }
+        };
+        
         // Load CSS
         const cssLink = document.createElement('link');
         cssLink.href = 'https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.css';
         cssLink.rel = 'stylesheet';
-        cssLink.onerror = () => reject(new Error('Failed to load Mapbox CSS'));
+        cssLink.onload = () => {
+            console.log('Mapbox GL CSS loaded successfully');
+            cssLoaded = true;
+            checkBothLoaded();
+        };
+        cssLink.onerror = () => {
+            console.error('Failed to load Mapbox CSS from CDN');
+            cssLoaded = true; // Continue anyway, JS might still work
+            checkBothLoaded();
+        };
         document.head.appendChild(cssLink);
         
         // Load JS
@@ -19,13 +41,14 @@ const loadMapboxGL = async () => {
         script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.js';
         script.async = true;
         script.onload = () => {
-            if ((window as any).mapboxgl) {
-                resolve((window as any).mapboxgl);
-            } else {
-                reject(new Error('Mapbox GL JS not available after script load'));
-            }
+            console.log('Mapbox GL JS script loaded');
+            jsLoaded = true;
+            checkBothLoaded();
         };
-        script.onerror = () => reject(new Error('Failed to load Mapbox GL JS script from CDN'));
+        script.onerror = () => {
+            console.error('Failed to load Mapbox GL JS script from CDN');
+            reject(new Error('Failed to load Mapbox GL JS script from CDN'));
+        };
         document.head.appendChild(script);
     });
 };
