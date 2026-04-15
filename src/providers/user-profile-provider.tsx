@@ -41,9 +41,22 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         refreshProfile();
       }
     }
-  }, []); // Empty deps - run only once on mount
+  }, [refreshProfile]); // Include refreshProfile in deps
 
-  // 3. Memoize value to prevent re-rendering consumers when provider re-renders for other reasons
+  // 3. Listen for logout - clear cache when accessToken is removed
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "accessToken" && !e.newValue) {
+        // Token was removed - user logged out
+        clearProfileCache();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [clearProfileCache]);
+
+  // 4. Memoize value to prevent re-rendering consumers when provider re-renders for other reasons
   const value = useMemo(() => ({
     profile,
     loading,

@@ -8,6 +8,7 @@ import ChatInfoSidebar from "../chat/components/chat-info-sidebar";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useMessageUser } from "@/hooks/use-chat-message-user";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { useUserProfileContext } from "@/providers/user-profile-provider";
 import { useChatUser } from "@/hooks/use-chat-user";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { useWebSocket } from "@/providers/websocket-provider";
@@ -39,15 +40,13 @@ export default function ConversationDetailPage() {
     
     const { subscribeToTopic, sendMessage } = useWebSocket();
     
-    const { profile, fetchUserProfile, fetchProfileById } = useUserProfile();
+    const { profile } = useUserProfileContext();
+    const { fetchProfileById } = useUserProfile();
     const { getChatByChatId } = useChatUser();
     const { getChatMembersByChatId } = useChatMemberUser();
     const [chatType, setChatType] = useState("")
 
-    // 1. Fetch current user profile
-    useEffect(() => {
-        fetchUserProfile(null);
-    }, [fetchUserProfile]);
+    // Profile is already loaded by UserProfileProvider, no need to fetch here
 
     // 2. Fetch Chat Metadata & Identify Other User if Private
     useEffect(() => {

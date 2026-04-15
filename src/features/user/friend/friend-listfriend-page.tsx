@@ -3,22 +3,20 @@ import { Input } from "@/components/ui/input";
 import LoadingLogo from "@/components/shared/loading-logo";
 import ErrorLogo from "@/components/shared/error-logo";
 import { useFriendship } from "@/hooks/use-friendship";
-import { useUserProfile } from "@/hooks/use-user-profile";
+import { useUserProfileContext } from "@/providers/user-profile-provider";
 // import FriendCard from "./FriendCard";
 import FriendCard from "./friend-listfriend-card";
 
 export default function FriendListFriendPage() {
     const {
         profile,
-        fetchUserProfile,
         loading: userLoading,
-    } = useUserProfile();
+    } = useUserProfileContext();
     const { friendships, loading, error, fetchFriendships } = useFriendship();
 
     useEffect(() => {
         fetchFriendships();
-        fetchUserProfile(); // Fetch user profile to get the current user's ID
-    }, []);
+    }, [fetchFriendships]);
     // useEffect(()=>{
     //     console.log(profile)
     // })
