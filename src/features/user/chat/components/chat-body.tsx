@@ -1,52 +1,40 @@
-import React, { useEffect, useRef, useState, useLayoutEffect, useCallback } from "react";
+import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
 import type { Message } from "@/types/message.type";
 import { messageUserService } from "@/services/message-user-service";
 import UserAvatar from "@/components/shared/user-avatar";
-import { LocationMessage } from "@/components/shared/location-message";
-import { useUserProfile } from "@/hooks/use-user-profile";
-import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { FileText, Download, Film, Clock, MoreVertical, Pencil, Trash2, X, Check, Flag } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import MessageReportDialog from "./message-report-dialog";
 
 type ChatBodyProps = {
     messages: Message[];
-    conversationId?: string;
     currentUserId?: string;
     onScroll?: (isNearTop: boolean) => void;
     isLoadingMore?: boolean;
     otherUserName?: string;
     otherUserImage?: string;
-    isGroupChat?: boolean;
     onUpdateMessage?: (id: string, newContent: string) => void;
     onDeleteMessage?: (id: string) => void;
 };
 
-const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
-    ({ messages, conversationId, currentUserId, onScroll, isLoadingMore, otherUserName, otherUserImage, isGroupChat, onUpdateMessage, onDeleteMessage }, ref) => {
-        const { fetchProfileById } = useUserProfile();
-        const { getChatMembersByChatId } = useChatMemberUser();
+const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
+    ({ messages, currentUserId, onScroll, isLoadingMore, otherUserName, otherUserImage, onUpdateMessage, onDeleteMessage }, ref) => {
         const [assetCache, setAssetCache] = useState<Record<string, { url: string; type: string }>>({});
-        const [senderCache, setSenderCache] = useState<Record<string, { name: string; nickname?: string }>>({});
         const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
         const [editContent, setEditContent] = useState<string>("");
         const scrollHeightRef = useRef<number>(0);
         const lastScrollTopRef = useRef<number>(0);
         const lastMessageIdRef = useRef<string | null>(null);
         const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
-        const [deleteConfirmation, setDeleteConfirmation] = useState<{ open: boolean; messageId: string | null }>({ open: false, messageId: null });
-        const fetchingSenderIds = useRef<Set<string>>(new Set());
 
-        const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+        const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
             const target = e.target as HTMLDivElement;
             lastScrollTopRef.current = target.scrollTop;
             const isNearTop = Math.abs(target.scrollTop) + target.clientHeight >= target.scrollHeight - 50;
             if (isNearTop && onScroll) {
                 onScroll(true);
             }
-        }, [onScroll]);
+        };
 
         useLayoutEffect(() => {
             if (ref && "current" in ref && ref.current) {
@@ -76,7 +64,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
 
         const fetchingIds = useRef<Set<string>>(new Set());
 
-        const fetchAsset = useCallback(async (messageId: string) => {
+        const fetchAsset = async (messageId: string) => {
             if (fetchingIds.current.has(messageId) || assetCache[messageId]) return;
             
             fetchingIds.current.add(messageId);
@@ -91,7 +79,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
             } finally {
                 fetchingIds.current.delete(messageId);
             }
-        }, [assetCache]);
+        };
 
         useEffect(() => {
             const pendingAssets = messages.filter(m => 
@@ -101,63 +89,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
             pendingAssets.forEach((m) => fetchAsset(m.id));
         }, [messages, assetCache]);
 
-        const fetchSenderName = useCallback(async (senderId: string) => {
-            if (fetchingSenderIds.current.has(senderId) || senderCache[senderId]) return;
-            
-            if (!isGroupChat || senderId === currentUserId) return;
-            
-            fetchingSenderIds.current.add(senderId);
-            try {
-                // First try to get chat member with nickname
-                if (conversationId) {
-                    try {
-                        const membersResponse = await getChatMembersByChatId(null, null, conversationId, "", 0, 100, true);
-                        const members = Array.isArray(membersResponse?.content) ? membersResponse.content : Array.isArray(membersResponse) ? membersResponse : [];
-                        const member = members.find((m: any) => m.memberId === senderId || m.userId === senderId);
-                        
-                        if (member) {
-                            const displayName = member.nickname || member.memberName || member.userName;
-                            setSenderCache((prev) => ({
-                                ...prev,
-                                [senderId]: {
-                                    name: displayName,
-                                    nickname: member.nickname
-                                }
-                            }));
-                            return;
-                        }
-                    } catch (error) {
-                        console.error(`Failed to load chat member info for ${senderId}:`, error);
-                    }
-                }
-                
-                // Fallback to profile if member info not available
-                const profile = await fetchProfileById(senderId);
-                if (profile?.name) {
-                    setSenderCache((prev) => ({
-                        ...prev,
-                        [senderId]: {
-                            name: profile.name
-                        }
-                    }));
-                }
-            } catch (error) {
-                console.error(`Failed to load sender profile ${senderId}:`, error);
-            } finally {
-                fetchingSenderIds.current.delete(senderId);
-            }
-        }, [isGroupChat, currentUserId, senderCache, conversationId, fetchProfileById, getChatMembersByChatId]);
-
-        useEffect(() => {
-            if (!isGroupChat) return;
-            
-            const pendingSenders = messages.filter(m => 
-                m.senderId !== currentUserId && !senderCache[m.senderId]
-            );
-            pendingSenders.forEach((m) => fetchSenderName(m.senderId));
-        }, [messages, isGroupChat, currentUserId, senderCache, fetchSenderName]);
-
-        const handleDownload = useCallback((messageId: string, filename: string) => {
+        const handleDownload = (messageId: string, filename: string) => {
             const asset = assetCache[messageId];
             if (!asset) return;
             
@@ -167,7 +99,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        }, [assetCache]);
+        };
 
         return (
             <div
@@ -186,8 +118,6 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                     const isMe = message.senderId === currentUserId;
                     const asset = assetCache[message.id];
                     const isSystemMessage = message.type === "SYSTEM_MESSAGE";
-                    const isDeleted = message.state === "REMOVED";
-                    const isEdited = message.state === "EDITED";
 
                     // Render system messages differently
                     if (isSystemMessage) {
@@ -198,28 +128,6 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                             >
                                 <div className="px-4 py-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium text-center max-w-[80%]">
                                     {message.content}
-                                </div>
-                            </div>
-                        );
-                    }
-
-                    // Render deleted messages
-                    if (isDeleted) {
-                        return (
-                            <div
-                                key={message.id}
-                                className={`group flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}
-                            >
-                                {!isMe && (
-                                    <UserAvatar 
-                                        name={otherUserName || "User"} 
-                                        imageUrl={otherUserImage} 
-                                        size="sm" 
-                                        className="mb-1 shrink-0"
-                                    />
-                                )}
-                                <div className={`p-3 rounded-2xl text-sm italic opacity-60 ${isMe ? "bg-primary/10" : "bg-muted/50"}`}>
-                                    Tin nhắn đã bị xóa
                                 </div>
                             </div>
                         );
@@ -238,22 +146,15 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                     className="mb-1 shrink-0"
                                 />
                             )}
-                            <div className="flex flex-col gap-1">
-                                {isGroupChat && !isMe && (
-                                    <div className={`text-xs font-semibold text-muted-foreground px-1 ${isMe ? "text-right" : "text-left"}`}>
-                                        {senderCache[message.senderId]?.nickname || senderCache[message.senderId]?.name || message.senderId}
-                                    </div>
-                                )}
-                                <div className={`flex items-end gap-1 ${isMe ? "flex-row-reverse" : ""}`}>
-                                <div
-                                    className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all overflow-hidden flex-1
-                                        ${isMe
-                                            ? "bg-primary text-primary-foreground rounded-br-none self-end max-w-[75%]"
-                                            : "bg-muted text-muted-foreground rounded-bl-none self-start max-w-[75%]"
-                                        }
-                                    `}
-                                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                                >
+                            <div
+                                className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all overflow-hidden
+                                    ${isMe
+                                        ? "bg-primary text-primary-foreground rounded-br-none self-end max-w-[75%]"
+                                        : "bg-muted text-muted-foreground rounded-bl-none self-start max-w-[75%]"
+                                    }
+                                `}
+                                style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                            >
                                 {message.type === "TEXT" && (
                                     editingMessageId === message.id ? (
                                         <div className="flex flex-col gap-2 min-w-[200px]">
@@ -286,8 +187,8 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                     ) : (
                                         <p className="whitespace-pre-wrap leading-relaxed">
                                             {message.content}
-                                            {isEdited && (
-                                                <span className="text-[10px] opacity-40 ml-2 italic font-semibold">(đã chỉnh sửa)</span>
+                                            {message.state === "EDITED" && (
+                                                <span className="text-[10px] opacity-50 ml-2 italic">(edited)</span>
                                             )}
                                         </p>
                                     )
@@ -347,30 +248,20 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                     </div>
                                 )}
 
-                                {message.type === "LOCATION" && (
-                                    (() => {
-                                        try {
-                                            const location = JSON.parse(message.content);
-                                            return <LocationMessage location={location} isMe={isMe} />;
-                                        } catch {
-                                            return <p className="text-xs opacity-60">Location data unavailable</p>;
-                                        }
-                                    })()
-                                )}
-
                                 <div className={`text-[10px] mt-1.5 opacity-60 font-semibold tracking-tighter ${isMe ? "text-right" : "text-left"}`}>
                                     {new Date(message.sentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
-                                </div>
-                                {!isSystemMessage && (
-                                    <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity self-end">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button className="p-1.5 text-muted-foreground hover:bg-muted/50 rounded-full outline-none focus:bg-muted/50">
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align={isMe ? "end" : "start"} className="w-40">
+                            </div>
+                            
+                            {!isSystemMessage && (
+                                <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity self-center mx-1">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <button className="p-1.5 text-muted-foreground hover:bg-muted/50 rounded-full outline-none focus:bg-muted/50">
+                                                <MoreVertical className="w-4 h-4" />
+                                            </button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align={isMe ? "end" : "start"} className="w-32">
                                             {isMe ? (
                                                 <>
                                                     {message.type === "TEXT" && (
@@ -378,27 +269,29 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                                             setEditingMessageId(message.id);
                                                             setEditContent(message.content || "");
                                                         }}>
-                                                            <Pencil className="w-4 h-4 mr-2" /> Chỉnh sửa
+                                                            <Pencil className="w-4 h-4 mr-2" /> Update
                                                         </DropdownMenuItem>
                                                     )}
                                                     <DropdownMenuItem 
-                                                        onClick={() => setDeleteConfirmation({ open: true, messageId: message.id })} 
+                                                        onClick={() => {
+                                                            if (window.confirm("Are you sure you want to delete this message?")) {
+                                                                onDeleteMessage?.(message.id);
+                                                            }
+                                                        }} 
                                                         className="text-red-500 focus:bg-red-50 dark:focus:bg-red-950/50 focus:text-red-600"
                                                     >
-                                                        <Trash2 className="w-4 h-4 mr-2" /> Xóa
+                                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
                                                     </DropdownMenuItem>
                                                 </>
                                             ) : (
                                                 <DropdownMenuItem onClick={() => setReportingMessageId(message.id)}>
-                                                    <Flag className="w-4 h-4 mr-2" /> Báo cáo
+                                                    <Flag className="w-4 h-4 mr-2" /> Report
                                                 </DropdownMenuItem>
                                             )}
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
-                                )}
-                                </div>
-                            </div>
+                            )}
 
                         </div>
                     );
@@ -410,38 +303,9 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                         if (!open) setReportingMessageId(null);
                     }}
                 />
-                <Dialog open={deleteConfirmation.open} onOpenChange={(open) => setDeleteConfirmation({ ...deleteConfirmation, open })}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Xóa tin nhắn?</DialogTitle>
-                            <DialogDescription>
-                                Hành động này không thể hoàn tác. Tin nhắn sẽ bị xóa vĩnh viễn.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter className="gap-2">
-                            <Button
-                                variant="outline"
-                                onClick={() => setDeleteConfirmation({ open: false, messageId: null })}
-                            >
-                                Hủy
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={() => {
-                                    if (deleteConfirmation.messageId) {
-                                        onDeleteMessage?.(deleteConfirmation.messageId);
-                                        setDeleteConfirmation({ open: false, messageId: null });
-                                    }
-                                }}
-                            >
-                                Xóa
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
             </div>
         );
     },
-));
+);
 
 export default ChatBody;
