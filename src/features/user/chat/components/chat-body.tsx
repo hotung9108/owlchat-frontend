@@ -3,6 +3,7 @@ import type { Message } from "@/types/message.type";
 import { messageUserService } from "@/services/message-user-service";
 import UserAvatar from "@/components/shared/user-avatar";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { FileText, Download, Film, Clock, MoreVertical, Pencil, Trash2, X, Check, Flag } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,6 +12,7 @@ import MessageReportDialog from "./message-report-dialog";
 
 type ChatBodyProps = {
     messages: Message[];
+    conversationId?: string;
     currentUserId?: string;
     onScroll?: (isNearTop: boolean) => void;
     isLoadingMore?: boolean;
@@ -22,10 +24,11 @@ type ChatBodyProps = {
 };
 
 const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
-    ({ messages, currentUserId, onScroll, isLoadingMore, otherUserName, otherUserImage, isGroupChat, onUpdateMessage, onDeleteMessage }, ref) => {
+    ({ messages, conversationId, currentUserId, onScroll, isLoadingMore, otherUserName, otherUserImage, isGroupChat, onUpdateMessage, onDeleteMessage }, ref) => {
         const { fetchProfileById } = useUserProfile();
+        const { getChatMembersByChatId } = useChatMemberUser();
         const [assetCache, setAssetCache] = useState<Record<string, { url: string; type: string }>>({});
-        const [senderCache, setSenderCache] = useState<Record<string, { name: string }>>({});
+        const [senderCache, setSenderCache] = useState<Record<string, { name: string; nickname?: string }>>({});
         const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
         const [editContent, setEditContent] = useState<string>("");
         const scrollHeightRef = useRef<number>(0);
@@ -104,16 +107,45 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
             
             fetchingSenderIds.current.add(senderId);
             try {
+                // First try to get chat member with nickname
+                if (conversationId) {
+                    try {
+                        const membersResponse = await getChatMembersByChatId(null, null, conversationId, "", 0, 100, true);
+                        const members = Array.isArray(membersResponse?.content) ? membersResponse.content : Array.isArray(membersResponse) ? membersResponse : [];
+                        const member = members.find((m: any) => m.memberId === senderId || m.userId === senderId);
+                        
+                        if (member) {
+                            const displayName = member.nickname || member.memberName || member.userName;
+                            setSenderCache((prev) => ({
+                                ...prev,
+                                [senderId]: {
+                                    name: displayName,
+                                    nickname: member.nickname
+                                }
+                            }));
+                            return;
+                        }
+                    } catch (error) {
+                        console.error(`Failed to load chat member info for ${senderId}:`, error);
+                    }
+                }
+                
+                // Fallback to profile if member info not available
                 const profile = await fetchProfileById(senderId);
                 if (profile?.name) {
-                    setSenderCache((prev) => ({ ...prev, [senderId]: { name: profile.name } }));
+                    setSenderCache((prev) => ({
+                        ...prev,
+                        [senderId]: {
+                            name: profile.name
+                        }
+                    }));
                 }
             } catch (error) {
                 console.error(`Failed to load sender profile ${senderId}:`, error);
             } finally {
                 fetchingSenderIds.current.delete(senderId);
             }
-        }, [isGroupChat, currentUserId, senderCache, fetchProfileById]);
+        }, [isGroupChat, currentUserId, senderCache, conversationId, fetchProfileById, getChatMembersByChatId]);
 
         useEffect(() => {
             if (!isGroupChat) return;
@@ -208,7 +240,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                             <div className="flex flex-col gap-1 flex-1">
                                 {isGroupChat && !isMe && (
                                     <div className={`text-xs font-semibold text-muted-foreground px-1 ${isMe ? "text-right" : "text-left"}`}>
-                                        {senderCache[message.senderId]?.name || message.senderId}
+                                        {senderCache[message.senderId]?.nickname || senderCache[message.senderId]?.name || message.senderId}
                                     </div>
                                 )}
                                 <div

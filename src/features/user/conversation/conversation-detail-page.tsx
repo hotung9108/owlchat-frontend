@@ -372,6 +372,7 @@ export default function ConversationDetailPage() {
                     <ChatBody
                         key={conversationId}
                         ref={chatBodyRef}
+                        conversationId={conversationId}
                         messages={messages}
                         currentUserId={profile?.id}
                         onScroll={handleScroll}
