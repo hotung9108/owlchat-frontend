@@ -31,7 +31,7 @@ export default function ConversationDetailPage() {
         setMessages,
         loading,
         getMessagesByChatId,
-        postNewTextMessage,
+        // postNewTextMessage,
         postNewFileMessage,
         putTextMessage,
         softDeleteMessage,
