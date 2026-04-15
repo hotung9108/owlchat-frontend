@@ -19,6 +19,8 @@ export const useUserProfile = () => {
     // Cache and deduplication for profile fetching
     const profileCacheRef = useRef<Map<string, UserProfile>>(new Map());
     const inFlightRequestsRef = useRef<Map<string, Promise<UserProfile | null>>>(new Map());
+    const currentUserProfileRef = useRef<UserProfile | null>(null);
+    const currentUserProfileRequestRef = useRef<Promise<UserProfile | null> | null>(null);
 
     const fetchProfiles = useCallback(
         async (
@@ -118,16 +120,53 @@ export const useUserProfile = () => {
     }, []);
 
     const fetchUserProfile = useCallback(async (accountId: string | null = null) => {
-        setLoading(true);
+        // Return cached profile if available (accountId = null means current user)
+        if (accountId === null && currentUserProfileRef.current) {
+            setProfile(currentUserProfileRef.current);
+            return currentUserProfileRef.current;
+        }
+
+        // Return existing in-flight request to avoid duplicate API calls
+        if (accountId === null && currentUserProfileRequestRef.current) {
+            return currentUserProfileRequestRef.current;
+        }
+
+        // Only set loading for first request
+        if (!currentUserProfileRequestRef.current) {
+            setLoading(true);
+        }
         setError(null);
+        
         try {
-            const data = await userProfileService.getUserProfile(accountId);
-            setProfile(data);
-            return data;
+            const request = userProfileService.getUserProfile(accountId)
+                .then((data) => {
+                    if (accountId === null) {
+                        currentUserProfileRef.current = data;
+                    }
+                    setProfile(data);
+                    if (accountId === null) {
+                        currentUserProfileRequestRef.current = null;
+                    }
+                    return data;
+                })
+                .catch((err: any) => {
+                    setError(err.message || "Failed to fetch user profile");
+                    if (accountId === null) {
+                        currentUserProfileRequestRef.current = null;
+                    }
+                    throw err;
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+
+            if (accountId === null) {
+                currentUserProfileRequestRef.current = request;
+            }
+            return request;
         } catch (err: any) {
-            setError(err.message || "Failed to fetch user profile");
-        } finally {
             setLoading(false);
+            throw err;
         }
     }, []);
 
@@ -192,6 +231,9 @@ export const useUserProfile = () => {
             profileCacheRef.current.delete(id);
         } else {
             profileCacheRef.current.clear();
+            // Also clear current user profile cache
+            currentUserProfileRef.current = null;
+            currentUserProfileRequestRef.current = null;
         }
     }, []);
 

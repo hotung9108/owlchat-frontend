@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { User, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFriend } from "@/hooks/use-friend";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { useUserProfileContext } from "@/providers/user-profile-provider";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import type { UserProfile } from "@/types/user-profile.type";
 import LoadingLogo from "@/components/shared/loading-logo";
@@ -90,11 +91,10 @@ const ITEMS_PER_PAGE = 12;
 export default function FriendDiscoveryFriendPage() {
     const {
         profiles: allProfiles,
-        profile,
         fetchAllProfiles,
-        fetchUserProfile,
         loading: profilesLoading,
     } = useUserProfile();
+    const { profile } = useUserProfileContext();
     const {
         postFriendRequest,
         loading: friendLoading,
@@ -107,8 +107,7 @@ export default function FriendDiscoveryFriendPage() {
     // Load all profiles on mount
     useEffect(() => {
         fetchAllProfiles();
-        fetchUserProfile();
-    }, []);
+    }, [fetchAllProfiles]);
     
     // Filter profiles based on search term and exclude current user
     const filteredProfiles = useMemo(() => {

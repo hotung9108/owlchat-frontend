@@ -118,23 +118,13 @@ export default function FriendRequestCard({
                     </div>
                 )}
                 {status === "ACCEPTED" && (
-                    <div className="flex gap-2">
-                        <Button
-                            className="px-4 py-2 bg-destructive text-white rounded-lg shadow-md hover:bg-red-600"
-                            onClick={() => onDecline(requestId)}
-                        >
-                            Decline
-                        </Button>
+                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium">
+                        <span>✓ Friends</span>
                     </div>
                 )}
                 {status === "REJECTED" && (
-                    <div className="flex gap-2">
-                        <Button
-                            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg shadow-md hover:bg-primary-foreground hover:text-primary"
-                            onClick={() => onAccept(friendId)}
-                        >
-                            Accept
-                        </Button>
+                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm font-medium">
+                        <span>✗ Declined</span>
                     </div>
                 )}
                 <div>

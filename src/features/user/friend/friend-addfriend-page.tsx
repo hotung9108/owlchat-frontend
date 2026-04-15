@@ -6,6 +6,7 @@ import type { FriendRequestStatus } from "@/types/enum/friend-request-status";
 import ErrorLogo from "@/components/shared/error-logo";
 import LoadingLogo from "@/components/shared/loading-logo";
 import FriendRequestCard from "./friend-addfriend-card";
+import SentRequestCard from "./friend-sentrequest-card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function FriendAddFriendPage() {
@@ -152,37 +153,12 @@ export default function FriendAddFriendPage() {
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {filteredSentRequests.map((request) => (
-                                        <div
+                                        <SentRequestCard
                                             key={request.id}
-                                            className="p-4 rounded-lg border border-border bg-card text-card-foreground hover:shadow-md transition-shadow"
-                                        >
-                                            <div className="flex justify-between items-start mb-3">
-                                                <h3 className="font-semibold text-primary">
-                                                    {request.receiverId}
-                                                </h3>
-                                                <span
-                                                    className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                                        request.status === "PENDING"
-                                                            ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300"
-                                                            : request.status === "ACCEPTED"
-                                                            ? "bg-green-500/20 text-green-700 dark:text-green-300"
-                                                            : "bg-red-500/20 text-red-700 dark:text-red-300"
-                                                    }`}
-                                                >
-                                                    {request.status}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                Sent: {new Date(request.createdDate).toLocaleDateString()}
-                                            </p>
-                                            {request.status !== "PENDING" && (
-                                                <p className="text-xs text-muted-foreground mt-1">
-                                                    {request.status === "ACCEPTED"
-                                                        ? "Request accepted"
-                                                        : "Request rejected"}
-                                                </p>
-                                            )}
-                                        </div>
+                                            receiverId={request.receiverId}
+                                            status={request.status}
+                                            createdDate={request.createdDate}
+                                        />
                                     ))}
                                 </div>
                             )}

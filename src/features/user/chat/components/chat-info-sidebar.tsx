@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useImperativeHandle, forwardRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import UserAvatar from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,11 @@ const ROLE_RANK = {
     "VIEWER": 1
 };
 
-export default function ChatInfoSidebar({ type, conversationId, currentUserId, onClose }: ChatInfoSidebarProps) {
+const ChatInfoSidebar = forwardRef(function ChatInfoSidebar(
+    { type, conversationId, currentUserId, onClose }: ChatInfoSidebarProps,
+    ref
+) {
+    const navigate = useNavigate();
     const [members, setMembers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingNicknameId, setEditingNicknameId] = useState<string | null>(null);
@@ -59,6 +64,14 @@ export default function ChatInfoSidebar({ type, conversationId, currentUserId, o
             setLoading(false);
         }
     }, [conversationId, getChatMembersByChatId]);
+
+    // Expose refreshMembers method via ref for system message handling
+    useImperativeHandle(ref, () => ({
+        refreshMembers: () => {
+            console.log("[ChatInfo] Refreshing members due to system message");
+            fetchMembers();
+        }
+    }), [fetchMembers]);
 
     useEffect(() => {
         fetchMembers();
@@ -94,8 +107,8 @@ export default function ChatInfoSidebar({ type, conversationId, currentUserId, o
         if (!window.confirm("Are you sure you want to leave this chat?")) return;
         try {
             await deleteChatMember(null, null, targetId, conversationId);
-            // Optionally redirect user here, but typically socket handles removal or parent detects it
-            window.location.href = "/conversations";
+            // Redirect user after leaving chat
+            navigate("/conversations");
         } catch (error) {
             console.error("Failed to leave chat:", error);
         }
@@ -486,4 +499,6 @@ export default function ChatInfoSidebar({ type, conversationId, currentUserId, o
         </Dialog>
         </Card>
     );
-}
+});
+
+export default ChatInfoSidebar;

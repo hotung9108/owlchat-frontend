@@ -60,7 +60,7 @@ export default function DesktopNav() {
     const handleLogout = async () => {
         try {
             await logout();
-            window.location.href = "/login";
+            navigate("/login");
         } catch (error) {
             console.error("Logout failed:", error);
         }

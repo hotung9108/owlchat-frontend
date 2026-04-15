@@ -1,1 +1,1 @@
-export type MessageType = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE";
+export type MessageType = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE" | "LOCATION";

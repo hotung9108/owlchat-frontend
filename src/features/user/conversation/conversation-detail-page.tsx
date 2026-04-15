@@ -8,13 +8,17 @@ import ChatInfoSidebar from "../chat/components/chat-info-sidebar";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useMessageUser } from "@/hooks/use-chat-message-user";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { useUserProfileContext } from "@/providers/user-profile-provider";
 import { useChatUser } from "@/hooks/use-chat-user";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { useWebSocket } from "@/providers/websocket-provider";
 import type { MessageType } from "@/types/enum/mesage-type";
+import { websocketMessageService } from "@/services/websocket-message-service";
+import type { LocationData } from "@/config/mapbox";
 
 export default function ConversationDetailPage() {
     const chatBodyRef = useRef<HTMLDivElement>(null);
+    const chatInfoRef = useRef<any>(null);
     const [page, setPage] = useState(0); 
     const [hasMore, setHasMore] = useState(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -27,25 +31,24 @@ export default function ConversationDetailPage() {
     const { conversationId } = useParams();
     const {
         messages,
+        setMessages,
         loading,
         getMessagesByChatId,
-        postNewTextMessage,
+        // postNewTextMessage,
         postNewFileMessage,
         putTextMessage,
         softDeleteMessage,
     } = useMessageUser();
     
-    const { subscribeToTopic } = useWebSocket();
+    const { subscribeToTopic, sendMessage } = useWebSocket();
     
-    const { profile, fetchUserProfile, fetchProfileById } = useUserProfile();
+    const { profile } = useUserProfileContext();
+    const { fetchProfileById } = useUserProfile();
     const { getChatByChatId } = useChatUser();
     const { getChatMembersByChatId } = useChatMemberUser();
     const [chatType, setChatType] = useState("")
 
-    // 1. Fetch current user profile
-    useEffect(() => {
-        fetchUserProfile(null);
-    }, [fetchUserProfile]);
+    // Profile is already loaded by UserProfileProvider, no need to fetch here
 
     // 2. Fetch Chat Metadata & Identify Other User if Private
     useEffect(() => {
@@ -147,6 +150,7 @@ export default function ConversationDetailPage() {
     }, [conversationId, getMessagesByChatId]);
 
     // Subscribe to WebSocket for real-time messages - Setup once per conversation
+    // Optimized: Add messages directly to UI instead of reloading page 0
     useEffect(() => {
         if (!conversationId) return;
         
@@ -157,17 +161,97 @@ export default function ConversationDetailPage() {
         const setupSubscription = () => {
             const destination = `/topic/chat.${conversationId}`;
             subscription = subscribeToTopic(destination, (notification: any) => {
-                console.log("New real-time message notification:", notification);
-                // Re-fetch page 0 to instantly show new messages/edits/deletes
-                const size = 20;
-                getMessagesByChatId(
-                    null,
-                    null,
-                    conversationId,
-                    "",
-                    0,
-                    size,
-                ).catch((error) => console.debug("Real-time refresh messages error:", error));
+                console.log("[WebSocket] Message notification received:", notification);
+                
+                // Handle different notification types
+                if (notification?.type === "MESSAGE" && notification?.action === "CREATED") {
+                    // Check if this is a system message first
+                    if (notification?.data?.type === "SYSTEM_MESSAGE") {
+                        // SYSTEM MESSAGE - Add to messages and refresh chat details
+                        const transformedMessage = websocketMessageService.transformWebSocketMessage(
+                            notification.data
+                        );
+                        
+                        setMessages((prev) => [transformedMessage, ...prev]);
+                        
+                        // Trigger chat info sidebar refresh to reflect member/metadata changes
+                        if (chatInfoRef.current?.refreshMembers) {
+                            chatInfoRef.current.refreshMembers();
+                        }
+                        
+                        // Also update chat metadata for group name/avatar changes asynchronously
+                        const systemContent = notification.data.content || "";
+                        if (systemContent.toLowerCase().includes("name") || systemContent.toLowerCase().includes("avatar") || systemContent.toLowerCase().includes("tên") || systemContent.toLowerCase().includes("ảnh")) {
+                            // Fire and forget - don't await
+                            getChatByChatId(null, null, conversationId)
+                                .then((chat) => {
+                                    if (chat) {
+                                        setChatMetadata({
+                                            name: chat.name || chatMetadata.name,
+                                            avatar: chat.avatar || chatMetadata.avatar,
+                                            isOnline: chatMetadata.isOnline,
+                                        });
+                                    }
+                                })
+                                .catch((err) => console.error("Failed to refresh chat metadata:", err));
+                        }
+                        
+                        console.log("[WebSocket] ✓ System message processed, chat details updated");
+                    } else {
+                        // NEW MESSAGE - Replace optimistic message or add if new
+                        const transformedMessage = websocketMessageService.transformWebSocketMessage(
+                            notification.data
+                        );
+                        
+                        setMessages((prev) => {
+                            // Check if optimistic message already exists (with same content/sender)
+                            const optimisticIndex = prev.findIndex(
+                                (msg) => msg.type === "TEXT" && 
+                                       msg.content === transformedMessage.content &&
+                                       msg.senderId === transformedMessage.senderId &&
+                                       msg.id.startsWith("temp-")
+                            );
+                            
+                            if (optimisticIndex !== -1) {
+                                // Replace optimistic message with real one
+                                const updated = [...prev];
+                                updated[optimisticIndex] = transformedMessage;
+                                console.log("[WebSocket] ✓ Optimistic message replaced with real ID");
+                                return updated;
+                            } else {
+                                // New message from another user or refresh - add it
+                                console.log("[WebSocket] ✓ New message added to UI");
+                                return [transformedMessage, ...prev];
+                            }
+                        });
+                    }
+                } else if (notification?.type === "MESSAGE" && notification?.action === "UPDATED") {
+                    // EDITED MESSAGE - Update in place
+                    setMessages((prev) =>
+                        prev.map((msg) =>
+                            msg.id === notification.data.id
+                                ? websocketMessageService.transformWebSocketMessage(notification.data)
+                                : msg
+                        )
+                    );
+                    console.log("[WebSocket] ✓ Message updated in UI");
+                } else if (notification?.type === "MESSAGE" && notification?.action === "DELETED") {
+                    // DELETED MESSAGE - Mark as removed
+                    setMessages((prev) =>
+                        prev.map((msg) =>
+                            msg.id === notification.data.id
+                                ? { ...msg, state: "REMOVED", content: null }
+                                : msg
+                        )
+                    );
+                    console.log("[WebSocket] ✓ Message marked as deleted");
+                } else {
+                    // Fallback: Re-fetch page 0 for unknown notifications
+                    console.log("[WebSocket] Unknown notification type, refreshing messages...");
+                    getMessagesByChatId(null, null, conversationId, "", 0, 20).catch(
+                        (error) => console.debug("Real-time refresh error:", error)
+                    );
+                }
             });
             
             console.log("WebSocket subscription setup for:", destination);
@@ -214,13 +298,84 @@ export default function ConversationDetailPage() {
     };
 
     const handleSendMessage = async (message: string) => {
+        if (!profile?.id) {
+            console.error("User profile not loaded");
+            return;
+        }
+
         try {
-            await postNewTextMessage(null, null, {
+            // Create temp ID for optimistic message
+            const tempId = `temp-${Date.now()}-${Math.random()}`;
+            
+            // Create optimistic message before sending
+            const optimisticMessage = {
+                id: tempId,
                 chatId: conversationId!,
                 content: message,
-            });
+                senderId: profile.id,
+                sentDate: new Date().toISOString(),
+                createdDate: new Date().toISOString(),
+                state: "ORIGIN",
+                type: "TEXT",
+            };
+            
+            // Add to UI first (optimistic)
+            setMessages((prev) => [optimisticMessage, ...prev]);
+
+            // Send via WebSocket - server will broadcast back and replace temp message
+            websocketMessageService.sendViaWebSocket(
+                sendMessage,
+                conversationId!,
+                message,
+                profile.id
+            );
+
+            console.log("[Chat] ✓ Message sent via WebSocket (optimistic ID: " + tempId + ")");
         } catch (err) {
             console.error("Failed to send message:", err);
+        }
+    };
+
+    const handleSendLocation = async (location: LocationData) => {
+        if (!profile?.id) {
+            console.error("User profile not loaded");
+            return;
+        }
+
+        try {
+            // Create temp ID for optimistic message
+            const tempId = `temp-${Date.now()}-${Math.random()}`;
+            
+            // Serialize location data as JSON
+            const locationContent = JSON.stringify(location);
+            
+            // Create optimistic message before sending
+            const optimisticMessage = {
+                id: tempId,
+                chatId: conversationId!,
+                content: locationContent,
+                senderId: profile.id,
+                sentDate: new Date().toISOString(),
+                createdDate: new Date().toISOString(),
+                state: "ORIGIN",
+                type: "LOCATION",
+            };
+            
+            // Add to UI first (optimistic)
+            setMessages((prev) => [optimisticMessage, ...prev]);
+
+            // Send via WebSocket - server will broadcast back and replace temp message
+            websocketMessageService.sendViaWebSocket(
+                sendMessage,
+                conversationId!,
+                locationContent,
+                profile.id,
+                "LOCATION"
+            );
+
+            console.log("[Chat] ✓ Location shared via WebSocket (optimistic ID: " + tempId + ")");
+        } catch (err) {
+            console.error("Failed to share location:", err);
         }
     };
 
@@ -261,23 +416,27 @@ export default function ConversationDetailPage() {
                     <ChatBody
                         key={conversationId}
                         ref={chatBodyRef}
+                        conversationId={conversationId}
                         messages={messages}
                         currentUserId={profile?.id}
                         onScroll={handleScroll}
                         isLoadingMore={loading && page > 0}
                         otherUserName={chatMetadata.name}
                         otherUserImage={chatMetadata.avatar}
+                        isGroupChat={chatType === "GROUP"}
                         onUpdateMessage={handleUpdateMessage}
                         onDeleteMessage={handleDeleteMessage}
                     />
                     <ChatInput
                         onSendMessage={handleSendMessage}
                         onSendFile={handleSendFile}
+                        onSendLocation={handleSendLocation}
                     />
                 </ConversationContainer>
                 
                 {isSidebarOpen && conversationId && (
                     <ChatInfoSidebar 
+                        ref={chatInfoRef}
                         type={chatType}
                         conversationId={conversationId} 
                         currentUserId={profile?.id} 

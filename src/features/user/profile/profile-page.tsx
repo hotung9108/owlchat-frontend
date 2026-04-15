@@ -1,25 +1,15 @@
-import { useEffect, useState } from "react";
+import { Separator } from "@/components/ui/separator";
+import { useUserProfileContext } from "@/providers/user-profile-provider";
+import LoadingLogo from "@/components/shared/loading-logo";
+import ErrorLogo from "@/components/shared/error-logo";
 import { ProfileIdentity } from "./components/profile-identity";
 import { ProfileFriends } from "./components/profile-friends";
-import { Separator } from "@/components/ui/separator";
-import { useUserProfile } from "@/hooks/use-user-profile";
-import type { UserProfile } from "@/types/user-profile.type";
 
 export default function ProfilePage() {
-  const { fetchUserProfile } = useUserProfile();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { profile, loading, error } = useUserProfileContext();
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const data = await fetchUserProfile();
-        setProfile(data || null);
-      } catch (error) {
-        console.error("Failed to load profile:", error);
-      }
-    };
-    loadProfile();
-  }, [fetchUserProfile]);
+  if (loading) return <LoadingLogo />;
+  if (error) return <ErrorLogo errorMessage={`Error: ${error}`} />;
 
   return (
     // Main Content Wrapper

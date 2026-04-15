@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback, memo } from "react";
 import { Card } from "@/components/ui/card";
-import { Plus, Paperclip, Mic, SendHorizonal } from "lucide-react";
+import { Plus, Paperclip, Mic, SendHorizonal, MapPin } from "lucide-react";
 import type { MessageType } from "@/types/enum/mesage-type";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,27 +9,33 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { LocationPickerDialog } from "@/components/shared/location-picker-dialog";
+import type { LocationData } from "@/config/mapbox";
+import { isMapboxAvailable } from "@/config/mapbox";
 
 type ChatInputProps = {
     onSendMessage: (message: string) => void;
     onSendFile: (file: File, type: MessageType) => void;
+    onSendLocation?: (location: LocationData) => void;
 };
 
-export default function ChatInput({
+export default memo(function ChatInput({
     onSendMessage,
     onSendFile,
+    onSendLocation,
 }: ChatInputProps) {
     const [message, setMessage] = useState("");
     const [showMoreOptions, setShowMoreOptions] = useState(false);
+    const [showLocationPicker, setShowLocationPicker] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const detectFileType = (file: File): MessageType => {
+    const detectFileType = useCallback((file: File): MessageType => {
         if (file.type.startsWith("image/")) return "IMG";
         if (file.type.startsWith("video/")) return "VID";
         return "GENERIC_FILE";
-    };
+    }, []);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
 
@@ -39,16 +45,16 @@ export default function ChatInput({
         onSendFile(file, type);
         e.target.value = "";
         setShowMoreOptions(false);
-    };
+    }, [detectFileType, onSendFile]);
 
-    const triggerUpload = () => {
+    const triggerUpload = useCallback(() => {
         if (fileInputRef.current) {
             fileInputRef.current.accept = "image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt";
             fileInputRef.current.click();
         }
-    };
+    }, []);
 
-    const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
         const items = e.clipboardData.items;
 
         for (let i = 0; i < items.length; i++) {
@@ -64,30 +70,50 @@ export default function ChatInput({
                 return;
             }
         }
-    };
+    }, [detectFileType, onSendFile]);
 
-    const handleSend = () => {
+    const handleSend = useCallback(() => {
         if (message.trim() !== "") {
             onSendMessage(message);
             setMessage("");
-            // Reset textarea height
             const textarea = document.querySelector('textarea[placeholder="Type a message..."]') as HTMLTextAreaElement;
             if (textarea) {
                 textarea.style.height = 'auto';
             }
         }
-    };
+    }, [message, onSendMessage]);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSend();
         }
-    };
+    }, [handleSend]);
+
+    const handleMessageChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setMessage(e.target.value);
+        e.target.style.height = 'auto';
+        e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+    }, []);
+
+    const handleToggleOptions = useCallback(() => {
+        setShowMoreOptions(prev => !prev);
+    }, []);
+
+    const handleLocationSelect = useCallback((location: LocationData) => {
+        onSendLocation?.(location);
+        setShowMoreOptions(false);
+    }, [onSendLocation]);
 
     return (
-        <TooltipProvider>
-            <Card className="w-full p-3 rounded-2xl relative bg-card/80 backdrop-blur-md border-border/40 shadow-lg">
+        <>
+            <LocationPickerDialog
+                open={showLocationPicker}
+                onClose={() => setShowLocationPicker(false)}
+                onLocationSelect={handleLocationSelect}
+            />
+            <TooltipProvider>
+                <Card className="w-full p-3 rounded-2xl relative bg-card/80 backdrop-blur-md border-border/40 shadow-lg">
                 <div className="flex gap-3 items-end w-full">
                     <div className="flex items-center pb-1">
                         <div className="relative">
@@ -97,7 +123,7 @@ export default function ChatInput({
                                         variant="ghost"
                                         size="icon"
                                         className={`rounded-full transition-all duration-300 ${showMoreOptions ? "bg-primary/20 text-primary rotate-45" : "hover:bg-secondary text-muted-foreground"}`}
-                                        onClick={() => setShowMoreOptions(!showMoreOptions)}
+                                        onClick={handleToggleOptions}
                                     >
                                         <Plus className="w-6 h-6" />
                                     </Button>
@@ -116,6 +142,23 @@ export default function ChatInput({
                                         </div>
                                         <span>Attachments</span>
                                     </button>
+                                    {isMapboxAvailable() && (
+                                        <>
+                                            <div className="h-px bg-border/40 my-1 mx-2" />
+                                            <button 
+                                                onClick={() => {
+                                                    setShowLocationPicker(true);
+                                                    setShowMoreOptions(false);
+                                                }}
+                                                className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium"
+                                            >
+                                                <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center text-green-500">
+                                                    <MapPin className="w-5 h-5" />
+                                                </div>
+                                                <span>Location</span>
+                                            </button>
+                                        </>
+                                    )}
                                     <div className="h-px bg-border/40 my-1 mx-2" />
                                     <button className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium">
                                         <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-500">
@@ -141,11 +184,7 @@ export default function ChatInput({
                             rows={1}
                             placeholder="Type a message..."
                             value={message}
-                            onChange={(e) => {
-                                setMessage(e.target.value);
-                                e.target.style.height = 'auto';
-                                e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-                            }}
+                            onChange={handleMessageChange}
                             onKeyDown={handleKeyDown}
                             onPaste={handlePaste}
                         />
@@ -162,6 +201,7 @@ export default function ChatInput({
                     </div>
                 </div>
             </Card>
-        </TooltipProvider>
+            </TooltipProvider>
+        </>
     );
-}
+});

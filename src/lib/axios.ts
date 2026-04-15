@@ -91,17 +91,15 @@ apiClient.interceptors.response.use(
 
                 return apiClient(originalRequest);
             } catch (refreshError) {
-                // If refresh fails, redirect to login
                 if (typeof window !== "undefined") {
                     localStorage.removeItem("accessToken");
                     localStorage.removeItem("refreshToken");
                     localStorage.removeItem("user");
-                    window.location.href = "/login";
+                    window.dispatchEvent(new CustomEvent("auth-logout", { detail: { redirect: "/login" } }));
                 }
                 return Promise.reject(refreshError);
             }
         }
-        // Handle other error cases
         if (error.response?.status === 403) {
             error.message = "Bạn không có quyền thực hiện hành động này";
         } else if (error.response?.status === 404) {
