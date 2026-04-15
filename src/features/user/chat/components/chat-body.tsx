@@ -238,7 +238,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                     className="mb-1 shrink-0"
                                 />
                             )}
-                            <div className="flex flex-col gap-1 flex-1">
+                            <div className="flex flex-col gap-1">
                                 {isGroupChat && !isMe && (
                                     <div className={`text-xs font-semibold text-muted-foreground px-1 ${isMe ? "text-right" : "text-left"}`}>
                                         {senderCache[message.senderId]?.nickname || senderCache[message.senderId]?.name || message.senderId}
@@ -285,9 +285,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                         </div>
                                     ) : (
                                         <p className="whitespace-pre-wrap leading-relaxed">
-                                            {isMe && "... "}
-                                            {message.content.length > 50 ? message.content.substring(0, 50) + "..." : message.content}
-                                            {!isMe && " ..."}
+                                            {message.content}
                                             {isEdited && (
                                                 <span className="text-[10px] opacity-40 ml-2 italic font-semibold">(đã chỉnh sửa)</span>
                                             )}
@@ -372,7 +370,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                                     <MoreVertical className="w-4 h-4" />
                                                 </button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align={isMe ? "end" : "start"} side="bottom" sideOffset={8} className="w-40">
+                                            <DropdownMenuContent align={isMe ? "end" : "start"} className="w-40">
                                             {isMe ? (
                                                 <>
                                                     {message.type === "TEXT" && (
