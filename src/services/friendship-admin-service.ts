@@ -1,5 +1,6 @@
 import apiClient from "@/lib/axios";
 import { API_ENDPOINTS } from "@/config/api";
+import type { SocialGrowthResponse } from "@/types/admin-stats.type";
 
 const FRIENDSHIP_BASE_URL = `${API_ENDPOINTS.SOCIAL_SERVICE}/admin/friendship`;
 
@@ -13,6 +14,11 @@ export interface CreateFriendshipRequest {
 /* ---------------- SERVICE ---------------- */
 
 export const friendshipAdminService = {
+    getGrowth: (from?: string, to?: string) =>
+    apiClient.get<SocialGrowthResponse>(`${FRIENDSHIP_BASE_URL}/stats/growth`, {
+      params: { from, to },
+    }),
+
   // GET /admin/friendship
   getAll: () => {
     return apiClient.get(FRIENDSHIP_BASE_URL);

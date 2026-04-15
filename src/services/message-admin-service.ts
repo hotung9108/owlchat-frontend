@@ -1,6 +1,7 @@
 import apiClient from "@/lib/axios";
 import { API_ENDPOINTS } from "@/config/api";
 import type { TextMessageUserRequest } from "@/types/message.type";
+import type { MessagesStatsResponse, MessagesTotalResponse } from "@/types/admin-stats.type";
 
 const MESSAGE_BASE_URL = `${API_ENDPOINTS.CHAT_SERVICE}/admin/message`;
 
@@ -35,6 +36,14 @@ export interface EditMessageRequest {
 /* ---------------- SERVICE ---------------- */
 
 export const messageAdminService = {
+    getStats: (from?: string, to?: string) =>
+    apiClient.get<MessagesStatsResponse>(`${MESSAGE_BASE_URL}/stats`, {
+      params: { from, to },
+    }),
+
+  getTotal: () =>
+    apiClient.get<MessagesTotalResponse>(`${MESSAGE_BASE_URL}/stats/total`),
+
   // GET /admin/message
   getAll: (params?: MessageQueryParams) => {
     return apiClient.get(MESSAGE_BASE_URL, { params });

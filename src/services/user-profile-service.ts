@@ -11,10 +11,30 @@ import type {
     UserProfileRequest,
     PaginatedResponse,
 } from "@/types/user-profile.type";
+import type { UsersStatsResponse, UsersGrowthResponse, UsersGenderDistributionResponse, UsersTotalResponse, UsersGrowthTodayResponse } from "@/types/admin-stats.type";
 
 const USER_PROFILE_BASE_URL = `${API_ENDPOINTS.USER_SERVICE}/user`;
 
 export const userProfileService = {
+    getStats: (from?: string, to?: string) =>
+        apiClient.get<UsersStatsResponse>(`${USER_PROFILE_BASE_URL}/stats`, {
+        params: { from, to },
+        }),
+
+    getGrowth: (from?: string, to?: string) =>
+        apiClient.get<UsersGrowthResponse>(`${USER_PROFILE_BASE_URL}/stats/growth`, {
+        params: { from, to },
+        }),
+
+    getGender: () =>
+        apiClient.get<UsersGenderDistributionResponse>(`${USER_PROFILE_BASE_URL}/stats/gender`),
+
+    getTotal: () =>
+        apiClient.get<UsersTotalResponse>(`${USER_PROFILE_BASE_URL}/stats/total`),
+
+    getGrowthToday: () =>
+        apiClient.get<UsersGrowthTodayResponse>(`${USER_PROFILE_BASE_URL}/stats/growth/today`),
+
     async getProfiles(
         keywords: string = "",
         page: number = 0,
