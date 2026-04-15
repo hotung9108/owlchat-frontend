@@ -238,7 +238,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                     className="mb-1 shrink-0"
                                 />
                             )}
-                            <div className="flex flex-col gap-1 flex-1">
+                            <div className="flex flex-col gap-1">
                                 {isGroupChat && !isMe && (
                                     <div className={`text-xs font-semibold text-muted-foreground px-1 ${isMe ? "text-right" : "text-left"}`}>
                                         {senderCache[message.senderId]?.nickname || senderCache[message.senderId]?.name || message.senderId}
