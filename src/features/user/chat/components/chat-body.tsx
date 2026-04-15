@@ -4,6 +4,8 @@ import { messageUserService } from "@/services/message-user-service";
 import UserAvatar from "@/components/shared/user-avatar";
 import { FileText, Download, Film, Clock, MoreVertical, Pencil, Trash2, X, Check, Flag } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import MessageReportDialog from "./message-report-dialog";
 
 type ChatBodyProps = {
@@ -26,6 +28,7 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
         const lastScrollTopRef = useRef<number>(0);
         const lastMessageIdRef = useRef<string | null>(null);
         const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
+        const [deleteConfirmation, setDeleteConfirmation] = useState<{ open: boolean; messageId: string | null }>({ open: false, messageId: null });
 
         const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
             const target = e.target as HTMLDivElement;
@@ -118,6 +121,8 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                     const isMe = message.senderId === currentUserId;
                     const asset = assetCache[message.id];
                     const isSystemMessage = message.type === "SYSTEM_MESSAGE";
+                    const isDeleted = message.state === "REMOVED";
+                    const isEdited = message.state === "EDITED";
 
                     // Render system messages differently
                     if (isSystemMessage) {
@@ -128,6 +133,28 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                             >
                                 <div className="px-4 py-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium text-center max-w-[80%]">
                                     {message.content}
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    // Render deleted messages
+                    if (isDeleted) {
+                        return (
+                            <div
+                                key={message.id}
+                                className={`group flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}
+                            >
+                                {!isMe && (
+                                    <UserAvatar 
+                                        name={otherUserName || "User"} 
+                                        imageUrl={otherUserImage} 
+                                        size="sm" 
+                                        className="mb-1 shrink-0"
+                                    />
+                                )}
+                                <div className={`p-3 rounded-2xl text-sm italic opacity-60 ${isMe ? "bg-primary/10" : "bg-muted/50"}`}>
+                                    Tin nhắn đã bị xóa
                                 </div>
                             </div>
                         );
@@ -187,8 +214,8 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                     ) : (
                                         <p className="whitespace-pre-wrap leading-relaxed">
                                             {message.content}
-                                            {message.state === "EDITED" && (
-                                                <span className="text-[10px] opacity-50 ml-2 italic">(edited)</span>
+                                            {isEdited && (
+                                                <span className="text-[10px] opacity-40 ml-2 italic font-semibold">(đã chỉnh sửa)</span>
                                             )}
                                         </p>
                                     )
@@ -261,7 +288,7 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                                 <MoreVertical className="w-4 h-4" />
                                             </button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align={isMe ? "end" : "start"} className="w-32">
+                                        <DropdownMenuContent align={isMe ? "end" : "start"} className="w-40">
                                             {isMe ? (
                                                 <>
                                                     {message.type === "TEXT" && (
@@ -269,23 +296,19 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                                             setEditingMessageId(message.id);
                                                             setEditContent(message.content || "");
                                                         }}>
-                                                            <Pencil className="w-4 h-4 mr-2" /> Update
+                                                            <Pencil className="w-4 h-4 mr-2" /> Chỉnh sửa
                                                         </DropdownMenuItem>
                                                     )}
                                                     <DropdownMenuItem 
-                                                        onClick={() => {
-                                                            if (window.confirm("Are you sure you want to delete this message?")) {
-                                                                onDeleteMessage?.(message.id);
-                                                            }
-                                                        }} 
+                                                        onClick={() => setDeleteConfirmation({ open: true, messageId: message.id })} 
                                                         className="text-red-500 focus:bg-red-50 dark:focus:bg-red-950/50 focus:text-red-600"
                                                     >
-                                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                                        <Trash2 className="w-4 h-4 mr-2" /> Xóa
                                                     </DropdownMenuItem>
                                                 </>
                                             ) : (
                                                 <DropdownMenuItem onClick={() => setReportingMessageId(message.id)}>
-                                                    <Flag className="w-4 h-4 mr-2" /> Report
+                                                    <Flag className="w-4 h-4 mr-2" /> Báo cáo
                                                 </DropdownMenuItem>
                                             )}
                                         </DropdownMenuContent>
@@ -303,6 +326,35 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
                         if (!open) setReportingMessageId(null);
                     }}
                 />
+                <Dialog open={deleteConfirmation.open} onOpenChange={(open) => setDeleteConfirmation({ ...deleteConfirmation, open })}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Xóa tin nhắn?</DialogTitle>
+                            <DialogDescription>
+                                Hành động này không thể hoàn tác. Tin nhắn sẽ bị xóa vĩnh viễn.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setDeleteConfirmation({ open: false, messageId: null })}
+                            >
+                                Hủy
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={() => {
+                                    if (deleteConfirmation.messageId) {
+                                        onDeleteMessage?.(deleteConfirmation.messageId);
+                                        setDeleteConfirmation({ open: false, messageId: null });
+                                    }
+                                }}
+                            >
+                                Xóa
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         );
     },
