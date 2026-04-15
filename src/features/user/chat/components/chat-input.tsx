@@ -155,7 +155,7 @@ export default memo(function ChatInput({
                                                 <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center text-green-500">
                                                     <MapPin className="w-5 h-5" />
                                                 </div>
-                                                <span>Share Location</span>
+                                                <span>Location</span>
                                             </button>
                                         </>
                                     )}
