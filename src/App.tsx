@@ -1,11 +1,14 @@
-import './App.css'
-
+import "./App.css";
+import {
+    HashRouter as Router,
+} from "react-router-dom";
+import AppRoutes from "./routes/app-routes";
 function App() {
-  return (
-    <>
-    ádadadada
-    </>
-  )
+    return (
+        <Router>
+            <AppRoutes/>
+        </Router>
+    );
 }
 
-export default App
+export default App;

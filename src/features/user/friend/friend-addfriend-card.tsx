@@ -1,0 +1,138 @@
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { User } from "lucide-react";
+import { useUserProfileContext } from "@/providers/user-profile-provider";
+
+type FriendRequestCardProps = {
+    friendId: string;
+    requestId: string;
+    status: "PENDING" | "ACCEPTED" | "REJECTED";
+    onAccept: (id: string) => void;
+    onDecline: (id: string) => void;
+};
+
+export default function FriendRequestCard({
+    friendId,
+    requestId,
+    status,
+    onAccept,
+    onDecline,
+}: FriendRequestCardProps) {
+    const { fetchProfileById } = useUserProfileContext();
+    const [profile, setProfile] = useState<any | null>(null);
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    
+    useEffect(() => {
+        setLoading(true);
+        fetchProfileById(friendId)
+            .then(data => {
+                setProfile(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Error fetching profile:", err);
+                setError("Failed to load profile");
+                setLoading(false);
+            });
+    }, [friendId, fetchProfileById]);
+
+    useEffect(() => {
+        if (profile?.avatar) {
+            import("@/services/user-profile-service").then(({ userProfileService }) => {
+                userProfileService.getUserAvatar(friendId)
+                    .then(blob => {
+                        if (blob && blob.size > 0) {
+                            setAvatarUrl(URL.createObjectURL(blob));
+                        }
+                    })
+                    .catch(err => console.error("Error fetching avatar:", err));
+            });
+        }
+    }, [profile?.avatar, friendId]);
+
+    useEffect(() => {
+        return () => {
+            if (avatarUrl) URL.revokeObjectURL(avatarUrl);
+        };
+    }, [avatarUrl]);
+
+    if (loading) {
+        return <p className="text-muted text-center">Loading...</p>;
+    }
+
+    if (error) {
+        return <p className="text-destructive text-center">Error loading friend profile</p>;
+    }
+
+    return (
+        <Card className="p-4 justify-between transition-[color,box-shadow] hover:shadow-md hover:ring-1 hover:ring-ring/50 bg-card text-card-foreground">
+            <div className="flex items-center gap-4">
+                {/* Avatar */}
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                    {avatarUrl ? (
+                        <img
+                            src={avatarUrl}
+                            alt={`${profile?.name || 'Friend'}'s profile`}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                            <User className="w-10 h-10" />
+                        </div>
+                    )}
+                </div>
+
+                {/* User Info */}
+                <div>
+                    <h3 className="text-lg font-bold text-primary">
+                        {profile?.name || "Unknown"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                        {profile?.email || "No email"}
+                    </p>
+                    <p className="text-sm text-muted-foreground italic">
+                        {profile?.name || "This user"} wants to be your friend!
+                    </p>
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-6 flex justify-between items-center">
+                {status === "PENDING" && (
+                    <div className="flex gap-2">
+                        <Button
+                            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg shadow-md hover:bg-primary-foreground hover:text-primary"
+                            onClick={() => onAccept(requestId)}
+                        >
+                            Accept
+                        </Button>
+                        <Button
+                            className="px-4 py-2 bg-destructive text-white rounded-lg shadow-md hover:bg-red-600"
+                            onClick={() => onDecline(requestId)}
+                        >
+                            Decline
+                        </Button>
+                    </div>
+                )}
+                {status === "ACCEPTED" && (
+                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium">
+                        <span>✓ Friends</span>
+                    </div>
+                )}
+                {status === "REJECTED" && (
+                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm font-medium">
+                        <span>✗ Declined</span>
+                    </div>
+                )}
+                <div>
+                    <Button variant="ghost" className="text-muted-foreground hover:text-primary">
+                        ...
+                    </Button>
+                </div>
+            </div>
+        </Card>
+    );
+}
