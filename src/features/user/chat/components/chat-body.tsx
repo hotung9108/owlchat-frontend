@@ -244,8 +244,9 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                         {senderCache[message.senderId]?.nickname || senderCache[message.senderId]?.name || message.senderId}
                                     </div>
                                 )}
+                                <div className="flex items-end gap-1">
                                 <div
-                                    className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all overflow-hidden
+                                    className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all overflow-hidden flex-1
                                         ${isMe
                                             ? "bg-primary text-primary-foreground rounded-br-none self-end max-w-[75%]"
                                             : "bg-muted text-muted-foreground rounded-bl-none self-start max-w-[75%]"
@@ -361,16 +362,15 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                     {new Date(message.sentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                                 </div>
-                            </div>
-                            {!isSystemMessage && (
-                                <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity self-center mx-1">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <button className="p-1.5 text-muted-foreground hover:bg-muted/50 rounded-full outline-none focus:bg-muted/50">
-                                                <MoreVertical className="w-4 h-4" />
-                                            </button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align={isMe ? "end" : "start"} side="bottom" sideOffset={8} className="w-40">
+                                {!isSystemMessage && (
+                                    <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity self-end">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className="p-1.5 text-muted-foreground hover:bg-muted/50 rounded-full outline-none focus:bg-muted/50">
+                                                    <MoreVertical className="w-4 h-4" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align={isMe ? "end" : "start"} side="bottom" sideOffset={8} className="w-40">
                                             {isMe ? (
                                                 <>
                                                     {message.type === "TEXT" && (
@@ -396,7 +396,9 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
-                            )}
+                                )}
+                                </div>
+                            </div>
 
                         </div>
                     );
