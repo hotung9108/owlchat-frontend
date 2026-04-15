@@ -244,7 +244,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                         {senderCache[message.senderId]?.nickname || senderCache[message.senderId]?.name || message.senderId}
                                     </div>
                                 )}
-                                <div className="flex items-end gap-1">
+                                <div className={`flex items-end gap-1 ${isMe ? "flex-row-reverse" : ""}`}>
                                 <div
                                     className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all overflow-hidden flex-1
                                         ${isMe
