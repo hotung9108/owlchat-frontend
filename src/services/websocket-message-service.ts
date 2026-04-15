@@ -11,12 +11,15 @@ export const websocketMessageService = {
    * @param sendMessage - WebSocket send function
    * @param chatId - Chat ID
    * @param content - Message content
+   * @param userId - User ID
+   * @param type - Message type (TEXT, LOCATION, etc.) - defaults to TEXT
    */
   sendViaWebSocket(
     sendMessage: (destination: string, body: any) => void,
     chatId: string,
     content: string,
-    userId: string
+    userId: string,
+    type: string = "TEXT"
   ): void {
     const destination = `/app/chat.send`; // App endpoint - server processes it
     const timestamp = new Date().toISOString();
@@ -26,7 +29,7 @@ export const websocketMessageService = {
       content,
       userId,
       timestamp,
-      type: "TEXT",
+      type,
     });
   },
 

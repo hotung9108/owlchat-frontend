@@ -14,6 +14,7 @@ import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { useWebSocket } from "@/providers/websocket-provider";
 import type { MessageType } from "@/types/enum/mesage-type";
 import { websocketMessageService } from "@/services/websocket-message-service";
+import type { LocationData } from "@/config/mapbox";
 
 export default function ConversationDetailPage() {
     const chatBodyRef = useRef<HTMLDivElement>(null);
@@ -335,6 +336,49 @@ export default function ConversationDetailPage() {
         }
     };
 
+    const handleSendLocation = async (location: LocationData) => {
+        if (!profile?.id) {
+            console.error("User profile not loaded");
+            return;
+        }
+
+        try {
+            // Create temp ID for optimistic message
+            const tempId = `temp-${Date.now()}-${Math.random()}`;
+            
+            // Serialize location data as JSON
+            const locationContent = JSON.stringify(location);
+            
+            // Create optimistic message before sending
+            const optimisticMessage = {
+                id: tempId,
+                chatId: conversationId!,
+                content: locationContent,
+                senderId: profile.id,
+                sentDate: new Date().toISOString(),
+                createdDate: new Date().toISOString(),
+                state: "ORIGIN",
+                type: "LOCATION",
+            };
+            
+            // Add to UI first (optimistic)
+            setMessages((prev) => [optimisticMessage, ...prev]);
+
+            // Send via WebSocket - server will broadcast back and replace temp message
+            websocketMessageService.sendViaWebSocket(
+                sendMessage,
+                conversationId!,
+                locationContent,
+                profile.id,
+                "LOCATION"
+            );
+
+            console.log("[Chat] ✓ Location shared via WebSocket (optimistic ID: " + tempId + ")");
+        } catch (err) {
+            console.error("Failed to share location:", err);
+        }
+    };
+
     const handleSendFile = async (file: File, type: MessageType) => {
         try {
             await postNewFileMessage(null, null, conversationId!, type, file);
@@ -386,6 +430,7 @@ export default function ConversationDetailPage() {
                     <ChatInput
                         onSendMessage={handleSendMessage}
                         onSendFile={handleSendFile}
+                        onSendLocation={handleSendLocation}
                     />
                 </ConversationContainer>
                 

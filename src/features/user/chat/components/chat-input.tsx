@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, memo } from "react";
 import { Card } from "@/components/ui/card";
-import { Plus, Paperclip, Mic, SendHorizonal } from "lucide-react";
+import { Plus, Paperclip, Mic, SendHorizonal, MapPin } from "lucide-react";
 import type { MessageType } from "@/types/enum/mesage-type";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,18 +9,24 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { LocationPickerDialog } from "@/components/shared/location-picker-dialog";
+import type { LocationData } from "@/config/mapbox";
+import { isMapboxAvailable } from "@/config/mapbox";
 
 type ChatInputProps = {
     onSendMessage: (message: string) => void;
     onSendFile: (file: File, type: MessageType) => void;
+    onSendLocation?: (location: LocationData) => void;
 };
 
 export default memo(function ChatInput({
     onSendMessage,
     onSendFile,
+    onSendLocation,
 }: ChatInputProps) {
     const [message, setMessage] = useState("");
     const [showMoreOptions, setShowMoreOptions] = useState(false);
+    const [showLocationPicker, setShowLocationPicker] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const detectFileType = useCallback((file: File): MessageType => {
@@ -94,9 +100,20 @@ export default memo(function ChatInput({
         setShowMoreOptions(prev => !prev);
     }, []);
 
+    const handleLocationSelect = useCallback((location: LocationData) => {
+        onSendLocation?.(location);
+        setShowMoreOptions(false);
+    }, [onSendLocation]);
+
     return (
-        <TooltipProvider>
-            <Card className="w-full p-3 rounded-2xl relative bg-card/80 backdrop-blur-md border-border/40 shadow-lg">
+        <>
+            <LocationPickerDialog
+                open={showLocationPicker}
+                onClose={() => setShowLocationPicker(false)}
+                onLocationSelect={handleLocationSelect}
+            />
+            <TooltipProvider>
+                <Card className="w-full p-3 rounded-2xl relative bg-card/80 backdrop-blur-md border-border/40 shadow-lg">
                 <div className="flex gap-3 items-end w-full">
                     <div className="flex items-center pb-1">
                         <div className="relative">
@@ -125,6 +142,23 @@ export default memo(function ChatInput({
                                         </div>
                                         <span>Attachments</span>
                                     </button>
+                                    {isMapboxAvailable() && (
+                                        <>
+                                            <div className="h-px bg-border/40 my-1 mx-2" />
+                                            <button 
+                                                onClick={() => {
+                                                    setShowLocationPicker(true);
+                                                    setShowMoreOptions(false);
+                                                }}
+                                                className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium"
+                                            >
+                                                <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center text-green-500">
+                                                    <MapPin className="w-5 h-5" />
+                                                </div>
+                                                <span>Share Location</span>
+                                            </button>
+                                        </>
+                                    )}
                                     <div className="h-px bg-border/40 my-1 mx-2" />
                                     <button className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-sm font-medium">
                                         <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-500">
@@ -167,6 +201,7 @@ export default memo(function ChatInput({
                     </div>
                 </div>
             </Card>
-        </TooltipProvider>
+            </TooltipProvider>
+        </>
     );
 });

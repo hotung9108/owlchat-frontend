@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useLayoutEffect, useCallback } from
 import type { Message } from "@/types/message.type";
 import { messageUserService } from "@/services/message-user-service";
 import UserAvatar from "@/components/shared/user-avatar";
+import { LocationMessage } from "@/components/shared/location-message";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { FileText, Download, Film, Clock, MoreVertical, Pencil, Trash2, X, Check, Flag } from "lucide-react";
@@ -343,6 +344,17 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                             <span className="text-[11px] font-bold uppercase tracking-wider">Download</span>
                                         </button>
                                     </div>
+                                )}
+
+                                {message.type === "LOCATION" && (
+                                    (() => {
+                                        try {
+                                            const location = JSON.parse(message.content);
+                                            return <LocationMessage location={location} isMe={isMe} />;
+                                        } catch {
+                                            return <p className="text-xs opacity-60">Location data unavailable</p>;
+                                        }
+                                    })()
                                 )}
 
                                 <div className={`text-[10px] mt-1.5 opacity-60 font-semibold tracking-tighter ${isMe ? "text-right" : "text-left"}`}>
