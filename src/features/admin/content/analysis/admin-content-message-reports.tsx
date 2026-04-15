@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,8 +18,8 @@ import {
 } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import {
-  Flag, Search, CalendarIcon, X, ChevronLeft, ChevronRight,
-  Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown,
+  Flag, Search, CalendarIcon, ChevronLeft, ChevronRight,
+  Pencil, Trash2, ArrowUp, ArrowDown,
 } from "lucide-react"
 import { format } from "date-fns"
 import type { DateRange } from "react-day-picker"
@@ -84,9 +83,9 @@ export default function AdminContentMessageReports() {
   const reports: MessageReport[] = (list as MessageReport[]) || [];
   const hasMore = reports.length === PAGE_SIZE;
 
-  const hasFilters = search || dateRange
+  // const hasFilters = search || dateRange
 
-  const reset = () => { setSearch(""); setDateRange(undefined); setPage(1) }
+  // const reset = () => { setSearch(""); setDateRange(undefined); setPage(1) }
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const openEdit = (r: MessageReport) => {

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/field";
 import owlLogo512 from "@/assets/owl-logo/black/owl-512.png";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../../hooks/use-auth";
 import { CheckCircle2Icon, AlertCircleIcon } from "lucide-react";
@@ -28,6 +28,7 @@ export function LoginForm({
     description = "Login to your OwlChat account",
     ...props
 }: LoginFormProps) {
+    const navigate = useNavigate();
     const [alertMessage, setAlertMessage] = useState<string | null>(null);
     const [alertType, setAlertType] = useState<"success" | "error" | null>(
         null,
@@ -48,11 +49,14 @@ export function LoginForm({
                 setShowAlert(false);
                 // Redirect based on role from response
                 if (response.role === "ADMIN") {
-                    window.location.href = "/admin";
+                    // window.location.href = "/admin";
+                    navigate("/admin");
                 } else if (response.role === "USER" || response.role === "BUSINESS") {
-                    window.location.href = "/conversations";
+                    // window.location.href = "/conversations";
+                    navigate("/conversations");
                 } else {
-                    window.location.href = navigateUrl;
+                    // window.location.href = navigateUrl;
+                    navigate(navigateUrl);
                 }
             }, 2000);
         } catch (error: any) {

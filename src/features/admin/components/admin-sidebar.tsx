@@ -34,7 +34,9 @@ export default function AdminSidebar({groups, user_infor}: AdminSidebarProps) {
             // Clear tokens
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
-            window.location.href = "/login";
+            // window.location.href = "/login";
+            navigate("/login");
+
         } catch (error) {
             console.error("Logout failed:", error);
         }
