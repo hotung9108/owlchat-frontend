@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User } from "lucide-react";
+import { User, Trash2 } from "lucide-react";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { useFriendship } from "@/hooks/use-friendship";
 
 type FriendCardProps = {
     friendId: string;
+    friendshipId?: string;
 };
 
-export default function FriendCard({ friendId }: FriendCardProps) {
+export default function FriendCard({ friendId, friendshipId }: FriendCardProps) {
     const { fetchProfileById, fetchAvatar, loading, error } = useUserProfile();
+    const { deleteFriendship, fetchFriendshipWithUser } = useFriendship();
     const [friendProfile, setFriendProfile] = useState<any>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [isUnfriending, setIsUnfriending] = useState(false);
 
     useEffect(() => {
         const loadFriendProfile = async () => {
@@ -40,6 +44,27 @@ export default function FriendCard({ friendId }: FriendCardProps) {
             if (avatarUrl) URL.revokeObjectURL(avatarUrl);
         };
     }, [avatarUrl]);
+
+    const handleUnfriend = async () => {
+        try {
+            setIsUnfriending(true);
+            
+            // If we don't have the friendship ID, fetch it
+            let fshipId = friendshipId;
+            if (!fshipId) {
+                const friendship = await fetchFriendshipWithUser(friendId);
+                fshipId = friendship?.id;
+            }
+            
+            if (fshipId) {
+                await deleteFriendship(fshipId);
+            }
+            setIsUnfriending(false);
+        } catch (err) {
+            console.error("Error unfriending:", err);
+            setIsUnfriending(false);
+        }
+    };
     
     if (loading) return <p>Loading...</p>;
     if (error) return <p>Error loading friend profile</p>;
@@ -78,16 +103,19 @@ export default function FriendCard({ friendId }: FriendCardProps) {
                     </p>
                 </div>
             </div>
-            <div className="mt-4 flex justify-between items-center ">
+            <div className="mt-4 flex justify-between items-center gap-2">
                 <div className="flex gap-2">
-                    <Button className="px-4 py-2  bg-primary text-primary-foreground hover:bg-primary-foreground hover:text-primary">Message</Button>
                     <Button className="px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary-foreground hover:text-secondary">Profile</Button>
                 </div>
-                <div>
-                    <Button variant="ghost" className="text-muted-foreground hover:text-primary">
-                        ...
-                    </Button>
-                </div>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={handleUnfriend}
+                    disabled={isUnfriending}
+                >
+                    <Trash2 className="w-4 h-4" />
+                </Button>
             </div>
         </Card>
     );

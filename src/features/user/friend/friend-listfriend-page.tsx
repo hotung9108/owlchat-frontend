@@ -45,7 +45,7 @@ export default function FriendListFriendPage() {
                                 ? friend.secondUserId
                                 : friend.firstUserId;
 
-                        return <FriendCard key={friend.id} friendId={friendId} />;
+                        return <FriendCard key={friend.id} friendId={friendId} friendshipId={friend.id} />;
                     })}
                 </div>
             )}
