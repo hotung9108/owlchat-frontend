@@ -7,7 +7,6 @@ import ConversationPage from "@/features/user/conversation/conversation-page";
 import ConversationDetailPage from "@/features/user/conversation/conversation-detail-page";
 import FriendPage from "@/features/user/friend/friend-page";
 import PinCodePage from "@/features/auth/pages/account-authenticate-page";
-// import AdminContentMessageReports from "@/features/admin/content/analysis/admin-content-message-reports";
 import AdminDashboard from "@/features/admin/content/analysis/admin-content-dashboard";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Card } from "@/components/ui/card";
