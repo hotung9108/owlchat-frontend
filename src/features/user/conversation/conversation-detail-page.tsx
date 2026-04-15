@@ -343,6 +343,7 @@ export default function ConversationDetailPage() {
                         isLoadingMore={loading && page > 0}
                         otherUserName={chatMetadata.name}
                         otherUserImage={chatMetadata.avatar}
+                        isGroupChat={chatType === "GROUP"}
                         onUpdateMessage={handleUpdateMessage}
                         onDeleteMessage={handleDeleteMessage}
                     />

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useLayoutEffect, useCallback } from
 import type { Message } from "@/types/message.type";
 import { messageUserService } from "@/services/message-user-service";
 import UserAvatar from "@/components/shared/user-avatar";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { FileText, Download, Film, Clock, MoreVertical, Pencil, Trash2, X, Check, Flag } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,13 +16,16 @@ type ChatBodyProps = {
     isLoadingMore?: boolean;
     otherUserName?: string;
     otherUserImage?: string;
+    isGroupChat?: boolean;
     onUpdateMessage?: (id: string, newContent: string) => void;
     onDeleteMessage?: (id: string) => void;
 };
 
 const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
-    ({ messages, currentUserId, onScroll, isLoadingMore, otherUserName, otherUserImage, onUpdateMessage, onDeleteMessage }, ref) => {
+    ({ messages, currentUserId, onScroll, isLoadingMore, otherUserName, otherUserImage, isGroupChat, onUpdateMessage, onDeleteMessage }, ref) => {
+        const { fetchProfileById } = useUserProfile();
         const [assetCache, setAssetCache] = useState<Record<string, { url: string; type: string }>>({});
+        const [senderCache, setSenderCache] = useState<Record<string, { name: string }>>({});
         const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
         const [editContent, setEditContent] = useState<string>("");
         const scrollHeightRef = useRef<number>(0);
@@ -29,6 +33,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
         const lastMessageIdRef = useRef<string | null>(null);
         const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
         const [deleteConfirmation, setDeleteConfirmation] = useState<{ open: boolean; messageId: string | null }>({ open: false, messageId: null });
+        const fetchingSenderIds = useRef<Set<string>>(new Set());
 
         const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
             const target = e.target as HTMLDivElement;
@@ -91,6 +96,33 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
             );
             pendingAssets.forEach((m) => fetchAsset(m.id));
         }, [messages, assetCache]);
+
+        const fetchSenderName = useCallback(async (senderId: string) => {
+            if (fetchingSenderIds.current.has(senderId) || senderCache[senderId]) return;
+            
+            if (!isGroupChat || senderId === currentUserId) return;
+            
+            fetchingSenderIds.current.add(senderId);
+            try {
+                const profile = await fetchProfileById(senderId);
+                if (profile?.name) {
+                    setSenderCache((prev) => ({ ...prev, [senderId]: { name: profile.name } }));
+                }
+            } catch (error) {
+                console.error(`Failed to load sender profile ${senderId}:`, error);
+            } finally {
+                fetchingSenderIds.current.delete(senderId);
+            }
+        }, [isGroupChat, currentUserId, senderCache, fetchProfileById]);
+
+        useEffect(() => {
+            if (!isGroupChat) return;
+            
+            const pendingSenders = messages.filter(m => 
+                m.senderId !== currentUserId && !senderCache[m.senderId]
+            );
+            pendingSenders.forEach((m) => fetchSenderName(m.senderId));
+        }, [messages, isGroupChat, currentUserId, senderCache, fetchSenderName]);
 
         const handleDownload = useCallback((messageId: string, filename: string) => {
             const asset = assetCache[messageId];
@@ -173,15 +205,21 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                     className="mb-1 shrink-0"
                                 />
                             )}
-                            <div
-                                className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all overflow-hidden
-                                    ${isMe
-                                        ? "bg-primary text-primary-foreground rounded-br-none self-end max-w-[75%]"
-                                        : "bg-muted text-muted-foreground rounded-bl-none self-start max-w-[75%]"
-                                    }
-                                `}
-                                style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                            >
+                            <div className="flex flex-col gap-1 flex-1">
+                                {isGroupChat && !isMe && (
+                                    <div className={`text-xs font-semibold text-muted-foreground px-1 ${isMe ? "text-right" : "text-left"}`}>
+                                        {senderCache[message.senderId]?.name || message.senderId}
+                                    </div>
+                                )}
+                                <div
+                                    className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all overflow-hidden
+                                        ${isMe
+                                            ? "bg-primary text-primary-foreground rounded-br-none self-end max-w-[75%]"
+                                            : "bg-muted text-muted-foreground rounded-bl-none self-start max-w-[75%]"
+                                        }
+                                    `}
+                                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                                >
                                 {message.type === "TEXT" && (
                                     editingMessageId === message.id ? (
                                         <div className="flex flex-col gap-2 min-w-[200px]">
@@ -278,8 +316,8 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                 <div className={`text-[10px] mt-1.5 opacity-60 font-semibold tracking-tighter ${isMe ? "text-right" : "text-left"}`}>
                                     {new Date(message.sentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
+                                </div>
                             </div>
-                            
                             {!isSystemMessage && (
                                 <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity self-center mx-1">
                                     <DropdownMenu>
