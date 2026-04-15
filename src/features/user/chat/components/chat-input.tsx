@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback, memo } from "react";
 import { Card } from "@/components/ui/card";
 import { Plus, Paperclip, Mic, SendHorizonal } from "lucide-react";
 import type { MessageType } from "@/types/enum/mesage-type";
@@ -15,7 +15,7 @@ type ChatInputProps = {
     onSendFile: (file: File, type: MessageType) => void;
 };
 
-export default function ChatInput({
+export default memo(function ChatInput({
     onSendMessage,
     onSendFile,
 }: ChatInputProps) {
@@ -23,13 +23,13 @@ export default function ChatInput({
     const [showMoreOptions, setShowMoreOptions] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const detectFileType = (file: File): MessageType => {
+    const detectFileType = useCallback((file: File): MessageType => {
         if (file.type.startsWith("image/")) return "IMG";
         if (file.type.startsWith("video/")) return "VID";
         return "GENERIC_FILE";
-    };
+    }, []);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
 
@@ -39,16 +39,16 @@ export default function ChatInput({
         onSendFile(file, type);
         e.target.value = "";
         setShowMoreOptions(false);
-    };
+    }, [detectFileType, onSendFile]);
 
-    const triggerUpload = () => {
+    const triggerUpload = useCallback(() => {
         if (fileInputRef.current) {
             fileInputRef.current.accept = "image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt";
             fileInputRef.current.click();
         }
-    };
+    }, []);
 
-    const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
         const items = e.clipboardData.items;
 
         for (let i = 0; i < items.length; i++) {
@@ -64,26 +64,35 @@ export default function ChatInput({
                 return;
             }
         }
-    };
+    }, [detectFileType, onSendFile]);
 
-    const handleSend = () => {
+    const handleSend = useCallback(() => {
         if (message.trim() !== "") {
             onSendMessage(message);
             setMessage("");
-            // Reset textarea height
             const textarea = document.querySelector('textarea[placeholder="Type a message..."]') as HTMLTextAreaElement;
             if (textarea) {
                 textarea.style.height = 'auto';
             }
         }
-    };
+    }, [message, onSendMessage]);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSend();
         }
-    };
+    }, [handleSend]);
+
+    const handleMessageChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setMessage(e.target.value);
+        e.target.style.height = 'auto';
+        e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+    }, []);
+
+    const handleToggleOptions = useCallback(() => {
+        setShowMoreOptions(prev => !prev);
+    }, []);
 
     return (
         <TooltipProvider>
@@ -97,7 +106,7 @@ export default function ChatInput({
                                         variant="ghost"
                                         size="icon"
                                         className={`rounded-full transition-all duration-300 ${showMoreOptions ? "bg-primary/20 text-primary rotate-45" : "hover:bg-secondary text-muted-foreground"}`}
-                                        onClick={() => setShowMoreOptions(!showMoreOptions)}
+                                        onClick={handleToggleOptions}
                                     >
                                         <Plus className="w-6 h-6" />
                                     </Button>
@@ -141,11 +150,7 @@ export default function ChatInput({
                             rows={1}
                             placeholder="Type a message..."
                             value={message}
-                            onChange={(e) => {
-                                setMessage(e.target.value);
-                                e.target.style.height = 'auto';
-                                e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-                            }}
+                            onChange={handleMessageChange}
                             onKeyDown={handleKeyDown}
                             onPaste={handlePaste}
                         />
@@ -164,4 +169,4 @@ export default function ChatInput({
             </Card>
         </TooltipProvider>
     );
-}
+});

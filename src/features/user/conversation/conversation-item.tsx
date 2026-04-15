@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { User, Users } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { useMessageUser } from "@/hooks/use-chat-message-user";
 import { useUserProfile } from "@/hooks/use-user-profile";
@@ -16,7 +16,7 @@ type Props = {
     isGroup?: boolean;
 };
 
-export default function ConversationItem({
+export default memo(function ConversationItem({
     id,
     imageUrl,
     username,
@@ -32,80 +32,74 @@ export default function ConversationItem({
     const [timeStamp, setTimeStamp] = useState<string | null>(null);
     const { fetchProfileById } = useUserProfile();
     
+    const loadMembers = useCallback(async () => {
+        if (!id || !currentUserId || isGroup) return;
+        try {
+            const membersResp = await getChatMembersByChatId(null, null, id);
+            const members = membersResp.content || membersResp;
+
+            if (Array.isArray(members)) {
+                const other = members.find((m: any) => {
+                    const mId = m.memberId ?? m.userId ?? m.id;
+                    return mId && mId !== currentUserId;
+                });
+
+                if (other) {
+                    const otherId = other.memberId ?? other.userId ?? other.id;
+                    const otherProfile = await fetchProfileById(otherId);
+                    if (otherProfile?.name) setDisplayName(otherProfile.name);
+                    if (otherProfile?.avatar || other.memberAvatar) {
+                        setDisplayAvatar(otherProfile?.avatar || other.memberAvatar);
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Error loading chat members for preview:", err);
+        }
+    }, [id, currentUserId, isGroup, getChatMembersByChatId, fetchProfileById]);
+    
     useEffect(() => {
-        // For group chats, keep the group name and avatar
         if (isGroup) {
             setDisplayName(username);
             setDisplayAvatar(imageUrl);
             return;
         }
-
-        // For one-on-one chats, load the other member's info
-        const loadMembers = async () => {
-            if (!id || !currentUserId) return;
-            try {
-                const membersResp = await getChatMembersByChatId(null, null, id);
-                const members = membersResp.content || membersResp; // Handle page object
-
-                if (Array.isArray(members)) {
-                    // Find the member who is NOT me
-                    const other = members.find((m: any) => {
-                        const mId = m.memberId ?? m.userId ?? m.id;
-                        return mId && mId !== currentUserId;
-                    });
-
-                    if (other) {
-                        const otherId = other.memberId ?? other.userId ?? other.id;
-                        const otherProfile = await fetchProfileById(otherId);
-                        if (otherProfile?.name) {
-                            setDisplayName(otherProfile.name);
-                        }
-                        if (otherProfile?.avatar || other.memberAvatar) {
-                            setDisplayAvatar(otherProfile?.avatar || other.memberAvatar);
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("Error loading chat members for preview:", err);
-            }
-        };
-
         loadMembers();
-    }, [id, currentUserId, isGroup, getChatMembersByChatId, fetchProfileById]);
+    }, [id, currentUserId, isGroup, username, imageUrl, loadMembers]);
+
+    const loadNewestMessage = useCallback(async () => {
+        if (!newestMessageId) {
+            setPreview("No messages yet");
+            setTimeStamp(null);
+            return;
+        }
+        try {
+            const msg = await getMessageById(null, null, newestMessageId);
+            if (!msg) return;
+
+            let content = msg.content || "";
+            if (msg.type === "IMG") content = "Đã gửi một ảnh";
+            else if (msg.type === "VID") content = "Đã gửi một video";
+            else if (msg.type === "GENERIC_FILE") content = "Đã gửi một tệp đính kèm";
+
+            if (msg.senderId === currentUserId) {
+                setPreview(`You: ${content}`);
+            } else {
+                setPreview(content);
+            }
+
+            if (msg.sentDate) {
+                const date = new Date(msg.sentDate);
+                setTimeStamp(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            }
+        } catch (err) {
+            console.error("Error loading newest message preview:", err);
+        }
+    }, [newestMessageId, currentUserId, getMessageById]);
 
     useEffect(() => {
-        const loadNewestMessage = async () => {
-            if (!newestMessageId) {
-                setPreview("No messages yet");
-                setTimeStamp(null);
-                return;
-            }
-            try {
-                const msg = await getMessageById(null, null, newestMessageId);
-                if (!msg) return;
-
-                let content = msg.content || "";
-                if (msg.type === "IMG") content = "Đã gửi một ảnh";
-                else if (msg.type === "VID") content = "Đã gửi một video";
-                else if (msg.type === "GENERIC_FILE") content = "Đã gửi một tệp đính kèm";
-
-                if (msg.senderId === currentUserId) {
-                    setPreview(`You: ${content}`);
-                } else {
-                    setPreview(content);
-                }
-
-                if (msg.sentDate) {
-                    const date = new Date(msg.sentDate);
-                    setTimeStamp(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-                }
-            } catch (err) {
-                console.error("Error loading newest message preview:", err);
-            }
-        };
-
         loadNewestMessage();
-    }, [newestMessageId, currentUserId, getMessageById]);
+    }, [newestMessageId, currentUserId, loadNewestMessage]);
 
     return (
         <Link to={`/conversations/${id}`} className="w-full">
@@ -139,4 +133,4 @@ export default function ConversationItem({
             </Card>
         </Link>
     );
-}
+});

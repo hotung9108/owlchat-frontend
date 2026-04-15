@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
+import React, { useEffect, useRef, useState, useLayoutEffect, useCallback } from "react";
 import type { Message } from "@/types/message.type";
 import { messageUserService } from "@/services/message-user-service";
 import UserAvatar from "@/components/shared/user-avatar";
@@ -19,7 +19,7 @@ type ChatBodyProps = {
     onDeleteMessage?: (id: string) => void;
 };
 
-const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
+const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
     ({ messages, currentUserId, onScroll, isLoadingMore, otherUserName, otherUserImage, onUpdateMessage, onDeleteMessage }, ref) => {
         const [assetCache, setAssetCache] = useState<Record<string, { url: string; type: string }>>({});
         const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -30,14 +30,14 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
         const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
         const [deleteConfirmation, setDeleteConfirmation] = useState<{ open: boolean; messageId: string | null }>({ open: false, messageId: null });
 
-        const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
             const target = e.target as HTMLDivElement;
             lastScrollTopRef.current = target.scrollTop;
             const isNearTop = Math.abs(target.scrollTop) + target.clientHeight >= target.scrollHeight - 50;
             if (isNearTop && onScroll) {
                 onScroll(true);
             }
-        };
+        }, [onScroll]);
 
         useLayoutEffect(() => {
             if (ref && "current" in ref && ref.current) {
@@ -67,7 +67,7 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
 
         const fetchingIds = useRef<Set<string>>(new Set());
 
-        const fetchAsset = async (messageId: string) => {
+        const fetchAsset = useCallback(async (messageId: string) => {
             if (fetchingIds.current.has(messageId) || assetCache[messageId]) return;
             
             fetchingIds.current.add(messageId);
@@ -82,7 +82,7 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
             } finally {
                 fetchingIds.current.delete(messageId);
             }
-        };
+        }, [assetCache]);
 
         useEffect(() => {
             const pendingAssets = messages.filter(m => 
@@ -92,7 +92,7 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
             pendingAssets.forEach((m) => fetchAsset(m.id));
         }, [messages, assetCache]);
 
-        const handleDownload = (messageId: string, filename: string) => {
+        const handleDownload = useCallback((messageId: string, filename: string) => {
             const asset = assetCache[messageId];
             if (!asset) return;
             
@@ -102,7 +102,7 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        };
+        }, [assetCache]);
 
         return (
             <div
@@ -358,6 +358,6 @@ const ChatBody = React.forwardRef<HTMLDivElement, ChatBodyProps>(
             </div>
         );
     },
-);
+));
 
 export default ChatBody;
