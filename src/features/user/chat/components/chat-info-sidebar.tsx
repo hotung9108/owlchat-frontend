@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import UserAvatar from "@/components/shared/user-avatar";
@@ -32,7 +32,10 @@ const ROLE_RANK = {
     "VIEWER": 1
 };
 
-export default function ChatInfoSidebar({ type, conversationId, currentUserId, onClose }: ChatInfoSidebarProps) {
+const ChatInfoSidebar = forwardRef(function ChatInfoSidebar(
+    { type, conversationId, currentUserId, onClose }: ChatInfoSidebarProps,
+    ref
+) {
     const navigate = useNavigate();
     const [members, setMembers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -61,6 +64,14 @@ export default function ChatInfoSidebar({ type, conversationId, currentUserId, o
             setLoading(false);
         }
     }, [conversationId, getChatMembersByChatId]);
+
+    // Expose refreshMembers method via ref for system message handling
+    useImperativeHandle(ref, () => ({
+        refreshMembers: () => {
+            console.log("[ChatInfo] Refreshing members due to system message");
+            fetchMembers();
+        }
+    }), [fetchMembers]);
 
     useEffect(() => {
         fetchMembers();
@@ -488,4 +499,6 @@ export default function ChatInfoSidebar({ type, conversationId, currentUserId, o
         </Dialog>
         </Card>
     );
-}
+});
+
+export default ChatInfoSidebar;

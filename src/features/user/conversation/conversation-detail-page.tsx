@@ -17,6 +17,7 @@ import { websocketMessageService } from "@/services/websocket-message-service";
 
 export default function ConversationDetailPage() {
     const chatBodyRef = useRef<HTMLDivElement>(null);
+    const chatInfoRef = useRef<any>(null);
     const [page, setPage] = useState(0); 
     const [hasMore, setHasMore] = useState(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -163,32 +164,66 @@ export default function ConversationDetailPage() {
                 
                 // Handle different notification types
                 if (notification?.type === "MESSAGE" && notification?.action === "CREATED") {
-                    // NEW MESSAGE - Replace optimistic message or add if new
-                    const transformedMessage = websocketMessageService.transformWebSocketMessage(
-                        notification.data
-                    );
-                    
-                    setMessages((prev) => {
-                        // Check if optimistic message already exists (with same content/sender)
-                        const optimisticIndex = prev.findIndex(
-                            (msg) => msg.type === "TEXT" && 
-                                   msg.content === transformedMessage.content &&
-                                   msg.senderId === transformedMessage.senderId &&
-                                   msg.id.startsWith("temp-")
+                    // Check if this is a system message first
+                    if (notification?.data?.type === "SYSTEM_MESSAGE") {
+                        // SYSTEM MESSAGE - Add to messages and refresh chat details
+                        const transformedMessage = websocketMessageService.transformWebSocketMessage(
+                            notification.data
                         );
                         
-                        if (optimisticIndex !== -1) {
-                            // Replace optimistic message with real one
-                            const updated = [...prev];
-                            updated[optimisticIndex] = transformedMessage;
-                            console.log("[WebSocket] ✓ Optimistic message replaced with real ID");
-                            return updated;
-                        } else {
-                            // New message from another user or refresh - add it
-                            console.log("[WebSocket] ✓ New message added to UI");
-                            return [transformedMessage, ...prev];
+                        setMessages((prev) => [transformedMessage, ...prev]);
+                        
+                        // Trigger chat info sidebar refresh to reflect member/metadata changes
+                        if (chatInfoRef.current?.refreshMembers) {
+                            chatInfoRef.current.refreshMembers();
                         }
-                    });
+                        
+                        // Also update chat metadata for group name/avatar changes asynchronously
+                        const systemContent = notification.data.content || "";
+                        if (systemContent.toLowerCase().includes("name") || systemContent.toLowerCase().includes("avatar") || systemContent.toLowerCase().includes("tên") || systemContent.toLowerCase().includes("ảnh")) {
+                            // Fire and forget - don't await
+                            getChatByChatId(null, null, conversationId)
+                                .then((chat) => {
+                                    if (chat) {
+                                        setChatMetadata({
+                                            name: chat.name || chatMetadata.name,
+                                            avatar: chat.avatar || chatMetadata.avatar,
+                                            isOnline: chatMetadata.isOnline,
+                                        });
+                                    }
+                                })
+                                .catch((err) => console.error("Failed to refresh chat metadata:", err));
+                        }
+                        
+                        console.log("[WebSocket] ✓ System message processed, chat details updated");
+                    } else {
+                        // NEW MESSAGE - Replace optimistic message or add if new
+                        const transformedMessage = websocketMessageService.transformWebSocketMessage(
+                            notification.data
+                        );
+                        
+                        setMessages((prev) => {
+                            // Check if optimistic message already exists (with same content/sender)
+                            const optimisticIndex = prev.findIndex(
+                                (msg) => msg.type === "TEXT" && 
+                                       msg.content === transformedMessage.content &&
+                                       msg.senderId === transformedMessage.senderId &&
+                                       msg.id.startsWith("temp-")
+                            );
+                            
+                            if (optimisticIndex !== -1) {
+                                // Replace optimistic message with real one
+                                const updated = [...prev];
+                                updated[optimisticIndex] = transformedMessage;
+                                console.log("[WebSocket] ✓ Optimistic message replaced with real ID");
+                                return updated;
+                            } else {
+                                // New message from another user or refresh - add it
+                                console.log("[WebSocket] ✓ New message added to UI");
+                                return [transformedMessage, ...prev];
+                            }
+                        });
+                    }
                 } else if (notification?.type === "MESSAGE" && notification?.action === "UPDATED") {
                     // EDITED MESSAGE - Update in place
                     setMessages((prev) =>
@@ -355,6 +390,7 @@ export default function ConversationDetailPage() {
                 
                 {isSidebarOpen && conversationId && (
                     <ChatInfoSidebar 
+                        ref={chatInfoRef}
                         type={chatType}
                         conversationId={conversationId} 
                         currentUserId={profile?.id} 
