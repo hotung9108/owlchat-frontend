@@ -23,7 +23,7 @@ export default function FriendListFriendPage() {
         fetchFriendships(-1, 10);
         
         const handleSocial = () => {
-            fetchFriendships(-1, 10000);
+            fetchFriendships(-1, 10);
         };
         eventBus.on("social", handleSocial);
         return () => {
@@ -57,8 +57,6 @@ export default function FriendListFriendPage() {
             loadFriendNames();
         }
     }, [friendships, profile?.id, fetchProfileById]);
-    if (loading || userLoading) return <LoadingLogo />;
-    if (error) return <ErrorLogo errorMessage={`Error: ${error}`} />;
 
     // Filter friendships by search query
     const filteredFriendships = useMemo(() => {
@@ -75,6 +73,9 @@ export default function FriendListFriendPage() {
             return friendName.toLowerCase().includes(query);
         });
     }, [friendships, searchQuery, profile?.id, friendNamesMap]);
+
+    if (loading || userLoading) return <LoadingLogo />;
+    if (error) return <ErrorLogo errorMessage={`Error: ${error}`} />;
 
     return (
         <>
