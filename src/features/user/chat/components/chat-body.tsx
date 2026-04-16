@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import MessageReportDialog from "./message-report-dialog";
+import { useMessageUser } from "@/hooks/use-chat-message-user";
 
 type ChatBodyProps = {
     messages: Message[];
@@ -28,8 +29,11 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
     ({ messages, conversationId, currentUserId, onScroll, isLoadingMore, otherUserName, otherUserImage, isGroupChat, onUpdateMessage, onDeleteMessage }, ref) => {
         const { fetchProfileById } = useUserProfile();
         const { getChatMembersByChatId } = useChatMemberUser();
+        const { getMessageById } = useMessageUser();
         const [assetCache, setAssetCache] = useState<Record<string, { url: string; type: string }>>({});
         const [senderCache, setSenderCache] = useState<Record<string, { name: string; nickname?: string }>>({});
+        const [historyCache, setHistoryCache] = useState<Record<string, Message>>({});
+        const [showHistory, setShowHistory] = useState<Record<string, boolean>>({});
         const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
         const [editContent, setEditContent] = useState<string>("");
         const scrollHeightRef = useRef<number>(0);
@@ -210,6 +214,27 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
             ],
         );
 
+        const toggleHistory = useCallback(async (messageId: string, predecessorId?: string) => {
+            if (!predecessorId) return;
+            
+            setShowHistory(prev => ({
+                ...prev,
+                [messageId]: !prev[messageId]
+            }));
+
+            if (!historyCache[predecessorId]) {
+                try {
+                    const data = await getMessageById(null, null, predecessorId);
+                    setHistoryCache(prev => ({
+                        ...prev,
+                        [predecessorId]: data
+                    }));
+                } catch (err) {
+                    console.error("Error fetching predecessor message:", err);
+                }
+            }
+        }, [getMessageById, historyCache]);
+
         useEffect(() => {
             if (!isGroupChat) return;
 
@@ -267,6 +292,10 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                         );
                     }
 
+                    if (message.state === "EDITED") {
+                        return 
+                    }
+
                     return (
                         <div
                             key={message.id}
@@ -300,8 +329,8 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                             overflowWrap: "break-word",
                                         }}
                                     >
-                                        {message.type === "TEXT" &&
-                                            (editingMessageId === message.id ? (
+                                        {message.type === "TEXT" && !message.predecessorId && (editingMessageId === message.id 
+                                        ? (
                                                 <div className="flex flex-col gap-2 min-w-[200px] pr-8">
                                                     <textarea
                                                         autoFocus
@@ -348,6 +377,80 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                                 <p className="whitespace-pre-wrap leading-relaxed">
                                                     {message.content}
                                                 </p>
+                                            ))}
+                                        {message.type === "TEXT" && message.predecessorId && (editingMessageId === message.id 
+                                        ? (
+                                                <div className="flex flex-col gap-2 min-w-[200px] pr-8">
+                                                    <textarea
+                                                        autoFocus
+                                                        value={editContent}
+                                                        onChange={(e) =>
+                                                            setEditContent(
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        className="w-full bg-background/50 border border-primary/20 rounded-md p-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary min-h-[60px] resize-none"
+                                                    />
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() =>
+                                                                setEditingMessageId(
+                                                                    null,
+                                                                )
+                                                            }
+                                                            className="p-1.5 rounded-full hover:bg-background/20 text-muted-foreground hover:text-foreground transition-colors"
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (
+                                                                    editContent.trim()
+                                                                ) {
+                                                                    onUpdateMessage?.(
+                                                                        message.id,
+                                                                        editContent.trim(),
+                                                                    );
+                                                                    setEditingMessageId(
+                                                                        null,
+                                                                    );
+                                                                }
+                                                            }}
+                                                            className="p-1.5 rounded-full hover:bg-background/20 text-green-500 hover:text-green-400 transition-colors"
+                                                        >
+                                                            <Check className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    {showHistory[message.id] && message.predecessorId && (
+                                                        <div className={`my-2 p-2 rounded-lg bg-black/5 dark:bg-white/5 border-l-2 border-primary/30 text-xs animate-in fade-in slide-in-from-top-1 ${isMe ? "text-right border-r-2 border-l-0" : "text-left"}`}>
+                                                            <div className="text-muted-foreground mb-1 opacity-70 font-medium">Nội dung cũ:</div>
+                                                            {historyCache[message.predecessorId] ? (
+                                                                <p className="whitespace-pre-wrap leading-relaxed opacity-80 italic">
+                                                                    {historyCache[message.predecessorId].content}
+                                                                </p>
+                                                            ) : (
+                                                                <div className="flex items-center gap-2 py-1">
+                                                                    <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin"></div>
+                                                                    <span className="opacity-50">Đang tải...</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <i
+                                                        className={`block w-full text-xs text-muted-foreground cursor-pointer hover:underline transition-all ${
+                                                            isMe ? "text-right" : "text-left"
+                                                        } ${showHistory[message.id] ? "font-bold text-muted-foreground" : ""}`}
+                                                        onClick={() => toggleHistory(message.id, message.predecessorId)}
+                                                    >
+                                                        {showHistory[message.id] ? "[Ẩn nội dung cũ]" : "[Edited]"}
+                                                    </i>
+                                                    <p className="whitespace-pre-wrap leading-relaxed">
+                                                        {message.content}
+                                                    </p>
+                                                </div>
                                             ))}
 
                                         {message.type === "IMG" &&
@@ -473,6 +576,7 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                         </div>
                     );
                 })}
+
                 <MessageReportDialog
                     messageId={reportingMessageId}
                     open={!!reportingMessageId}
