@@ -1,6 +1,6 @@
-import { useRef, useState, useCallback, memo } from "react";
+import { useRef, useState, useCallback, memo, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Plus, Paperclip, Mic, SendHorizonal, MapPin } from "lucide-react";
+import { Plus, Paperclip, Mic, SendHorizonal, MapPin, Smile } from "lucide-react";
 import type { MessageType } from "@/types/enum/mesage-type";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,32 @@ import {
 import { LocationPickerDialog } from "@/components/shared/location-picker-dialog";
 import type { LocationData } from "@/config/mapbox";
 import { isMapboxAvailable } from "@/config/mapbox";
+
+const EMOJI_CATEGORIES = {
+    "😊 Smileys": ["😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙", "🥲", "😋", "😛", "😜", "🤪", "😌", "😔", "😑", "😐", "😶", "🥱", "🤤", "😏", "😒", "🙁", "☹️", "😲", "😞", "😖", "😢", "😭", "😤", "😠", "😡", "🤬", "😈", "👿", "💀", "☠️", "💩", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖", "😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾", "🙈", "🙉", "🙊", "😽", "🤑", "🤓", "😎", "🤩", "😏", "🥳", "🤗", "🤫", "🤭", "🤥"],
+    "❤️ Love": ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "💌", "💜", "👋", "🤚", "🖐️", "✋", "🖖", "👌", "🤌", "🤏", "✌️", "🤞", "🫰", "🤟", "🤘", "🤙", "👍", "👎", "☝️", "👆", "👇", "☟", "👊", "✊", "🤜", "🤛", "🫲", "🫳", "👏", "🙌", "👐", "🤲", "🤝", "💪", "🦵", "🦶", "👂", "👃", "🧠", "🦷", "🦴"],
+    "🎉 Celebration": ["🎉", "🎊", "🎈", "🎀", "🎁", "🎂", "🍰", "🧁", "🍾", "🍷", "🍸", "🍹", "🍺", "🍻", "🥂", "🥃", "🥤", "🧃", "🧉", "🧊", "🥢", "🍽️", "🍴", "🥄", "🔪", "🍕", "🍔", "🍟", "🌭", "🌮", "🌯", "🥙", "🧆", "🍱", "🍜", "🍝", "🍠", "🍢", "🍣", "🍤", "🍥", "🥠", "🥮", "🍛", "🍲", "🥓", "🥗", "🍖", "🍗", "🥩", "🍚", "🍙", "🫔", "🍘", "🥟", "🍿", "🍩", "🍪", "🌰", "🥜", "🍯", "🥛", "🍼"],
+    "🌟 Stars": ["⭐", "🌟", "✨", "⚡", "💫", "🌠", "🎇", "🎆", "🌌", "🌃", "🌆", "🌇", "🌉", "🌁", "🌄", "🌅", "💥", "☄️", "🔆", "🔅", "🌞", "🌝", "🌛", "🌜", "🌚", "🌕", "🌖", "🌗", "🌘", "🌑", "🌒", "🌓", "🌔"],
+    "🎵 Music": ["🎵", "🎶", "🎤", "🎧", "🎼", "🎹", "🎸", "🎺", "🎷", "🥁", "🎻", "🎲", "🎯", "🎳", "🎮", "🎰", "🧩", "🎭", "🎬", "🎪", "🎨", "🎩", "🎓"],
+    "🏃 Activity": ["⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎳", "🏓", "🏸", "🏒", "🏑", "🥍", "🏏", "🥅", "⛳", "⛸️", "🎣", "🎽", "🎿", "⛷️", "🏂", "🪂", "🛼", "🛹", "🛺", "🏔️", "⛰️", "🌋", "🗻", "🏕️", "⛺", "🏠", "🏡", "🏘️", "🏚️", "🏗️", "🏭", "🏢", "🏬", "🏣", "🏤", "🏥", "🏦", "🏨", "🏪", "🏫", "🏩", "💪", "🤸", "⛹️", "🏋️", "🚴", "🚵", "🤼", "🧘", "🏃", "🚶"],
+    "🌈 Nature": ["🌈", "🌸", "🌹", "🌺", "🌻", "🌼", "🌷", "🌱", "🌲", "🌳", "🌴", "🌵", "🌾", "🌿", "☘️", "🍀", "🍁", "🍂", "🍃", "🍇", "🍈", "🍉", "🍊", "🍋", "🍌", "🍍", "🥭", "🍎", "🍏", "🍐", "🍑", "🍒", "🍓", "🫐", "🥝", "🍅", "🍆", "🥑", "🥦", "🥬", "🌶️", "🌽", "🥒", "🥔", "🍠", "🥐", "🍞", "🥖"],
+    "✈️ Travel": ["✈️", "🛫", "🛬", "🛰️", "🚁", "🛶", "⛵", "🚤", "🛳️", "🛥️", "🛩️", "💺", "🚂", "🚝", "🚞", "🚋", "🚃", "🚄", "🚅", "🚆", "🚇", "🚈", "🚉", "🚊", "🚌", "🚍", "🚎", "🚐", "🚑", "🚒", "🚓", "🚔", "🚕", "🚖", "🚗", "🚘", "🚙", "🚚", "🚛", "🚜", "🏎️", "🏍️", "🛵", "🦯", "🛴", "🚲", "🛺", "🚏", "⛽", "🅿️", "🚨", "🚥", "🚦", "🛑"],
+    "🔥 Hot": ["🔥", "💥", "⚔️", "🗡️", "🔫", "🛡️", "🚬", "⚰️", "⚱️", "🏺", "🔮", "📿", "💈", "⚗️", "🔭", "🔬", "🕯️", "💡", "🔦", "🏮", "📔", "📕", "📖", "📗", "📘", "📙", "📚", "📓", "📒", "📃", "📜", "📄", "📰", "🧷", "🧹", "🧺", "🧻", "🧼", "🧽", "🔗", "🔀", "⚙️", "🔧", "🔨", "⚒️", "🛠️"],
+    "📱 Tech": ["📱", "📲", "💻", "⌨️", "🖥️", "🖨️", "🖱️", "🖲️", "🕹️", "🗜️", "💽", "💾", "💿", "📀", "🧮", "🎥", "🎬", "📺", "📷", "📸", "📹", "🎞️", "📽️", "🎦", "📞", "☎️", "📟", "📠", "📺", "📻", "🎙️", "🎚️", "🎛️", "⏱️", "⏲️", "⏰", "🕰️", "⌚", "📡", "🔌", "🔋", "🪫"],
+    "🐶 Animals": ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🙈", "🙉", "🙊", "🐒", "🐔", "🐧", "🐦", "🐤", "🦆", "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🐛", "🦋", "🐌", "🐞", "🐜", "🐢", "🐍", "🦎", "🦖", "🦕", "🐙", "🦑", "🦐", "🦞", "🦟", "🦠", "🐠", "🐟", "🐡", "🦈", "🐬", "🐳", "🐋"],
+    "⛅ Weather": ["☀️", "🌤️", "⛅", "🌥️", "☁️", "🌦️", "🌧️", "⛈️", "🌩️", "🌨️", "❄️", "☃️", "⛄", "🌬️", "💨", "💧", "💦", "☔", "⛱️", "🏖️", "🏝️", "🌊", "🌴"],
+    "👨‍👩‍👧‍👦 People": ["👶", "👧", "🧒", "👦", "👨", "👩", "👴", "👵", "👨‍🦳", "👩‍🦳", "👨‍🦲", "👩‍🦲", "🧔", "👱‍♂️", "👱‍♀️", "👨‍🦰", "👩‍🦰", "👨‍🦱", "👩‍🦱", "🧑", "👨‍⚕️", "👩‍⚕️", "👨‍🎓", "👩‍🎓", "👨‍🏫", "👩‍🏫", "👨‍⚖️", "👩‍⚖️", "👨‍🌾", "👩‍🌾", "👨‍🍳", "👩‍🍳", "👨‍🔧", "👩‍🔧", "👨‍🏭", "👩‍🏭", "👨‍💼", "👩‍💼", "👨‍💻", "👩‍💻", "👨‍🎤", "👩‍🎤"],
+    "❓ Symbols": ["❓", "❔", "❕", "❗", "‼️", "⁉️", "🤷", "🤨", "🤯", "😐", "😑", "🙄", "😒", "🤥", "🤬", "🤐", "🤭", "😬", "☹️", "🙁", "😲", "😞", "😖", "😢", "😭", "😤", "😠", "😡", "😈", "👿", "☑️", "✅", "✔️", "❌", "❎", "⭕", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "🟤", "⚫", "⚪", "🔶", "🔷", "🔸", "🔹", "🔺", "🔻"],
+    "💎 Misc": ["💎", "💍", "👑", "🏆", "🥇", "🥈", "🥉", "🎖️", "🎗️", "🎫", "🎟️", "🎀", "🎁", "🎊", "🎉", "🎈", "🎆", "🎇", "🎃", "🎅", "🎄", "☃️", "⛄", "🌟", "✨", "⭐", "🌠", "🌌"],
+    "🔢 Numbers": ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"],
+    "💰 Money": ["💰", "💴", "💵", "💶", "💷", "💸", "💳", "🧾"],
+    "🏠 Places": ["🏠", "🏡", "🏢", "🏣", "🏤", "🏥", "🏦", "🏧", "🏨", "🏩", "🏪", "🏫", "🏬", "🏭", "🏯", "🏰", "💒", "🗼", "🗽", "🗿", "🎢", "🎡", "🎠", "⛲", "⛺"],
+    "📚 Objects": ["📚", "📖", "📝", "📄", "📃", "📑", "🧾", "📜", "📰", "🗞️", "📇", "🗃️", "🗳️", "🗂️", "📊", "📈", "📉", "📓", "📔", "📒", "📕", "📗", "📘", "📙", "📆", "📅", "🗒️", "🗓️"],
+    "🎬 Media": ["📹", "🎥", "🎬", "📽️", "🎞️", "📸", "📷", "📺", "📻", "🎙️", "🎚️", "🎛️", "📢", "📣", "📯", "🔔", "🔕"],
+    "⚽ Sports": ["⚽", "⚾", "🥎", "🎾", "🏐", "🏈", "🏉", "🥏", "🎳", "🏓", "🏸", "🏒", "🏑", "🥍", "🏏", "🥅", "⛳", "⛸️", "🎣", "🎽", "🎿", "⛷️", "🏂", "🪂", "🛼", "🛹", "⛹️", "🏋️", "🤼", "🤸", "🏃", "🚴", "🚵", "🤾", "🏌️"],
+};
+
+const EMOJI_LIST = Object.values(EMOJI_CATEGORIES).flat();
 
 type ChatInputProps = {
     onSendMessage: (message: string) => void;
@@ -27,7 +53,9 @@ export default memo(function ChatInput({
     const [message, setMessage] = useState("");
     const [showMoreOptions, setShowMoreOptions] = useState(false);
     const [showLocationPicker, setShowLocationPicker] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const emojiPickerRef = useRef<HTMLDivElement>(null);
 
     const detectFileType = useCallback((file: File): MessageType => {
         if (file.type.startsWith("image/")) return "IMG";
@@ -104,6 +132,29 @@ export default memo(function ChatInput({
         onSendLocation?.(location);
         setShowMoreOptions(false);
     }, [onSendLocation]);
+
+    const handleEmojiSelect = useCallback((emoji: string) => {
+        setMessage(prev => prev + emoji);
+        const textarea = document.querySelector('textarea[placeholder="Type a message..."]') as HTMLTextAreaElement;
+        if (textarea) {
+            textarea.focus();
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+        }
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+                setShowEmojiPicker(false);
+            }
+        };
+
+        if (showEmojiPicker) {
+            document.addEventListener("mousedown", handleClickOutside);
+            return () => document.removeEventListener("mousedown", handleClickOutside);
+        }
+    }, [showEmojiPicker]);
 
     return (
         <>
@@ -188,6 +239,48 @@ export default memo(function ChatInput({
                             onKeyDown={handleKeyDown}
                             onPaste={handlePaste}
                         />
+                    </div>
+
+                    <div className="pb-1 relative" ref={emojiPickerRef}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={`rounded-xl h-11 w-11 p-0 transition-all duration-300 ${showEmojiPicker ? "bg-primary/20 text-primary" : "hover:bg-secondary text-muted-foreground"}`}
+                                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                >
+                                    <Smile className="w-5 h-5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Emoji</TooltipContent>
+                        </Tooltip>
+
+                        {showEmojiPicker && (
+                            <div className="absolute right-0 bottom-full mb-2 bg-card/95 border border-border/60 rounded-2xl shadow-2xl p-3 backdrop-blur-xl z-50 animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-sm w-80">
+                                <div className="max-h-[320px] overflow-y-auto">
+                                    {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
+                                        <div key={category} className="mb-3">
+                                            <div className="text-xs font-semibold text-muted-foreground mb-2 px-2">{category}</div>
+                                            <div className="grid grid-cols-8 gap-1">
+                                                {emojis.map((emoji) => (
+                                                    <button
+                                                        key={emoji}
+                                                        onClick={() => {
+                                                            handleEmojiSelect(emoji);
+                                                        }}
+                                                        className="w-8 h-8 flex items-center justify-center text-xl rounded-lg hover:bg-primary/20 transition-colors cursor-pointer hover:scale-110 active:scale-95"
+                                                        title={emoji}
+                                                    >
+                                                        {emoji}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="pb-1">
