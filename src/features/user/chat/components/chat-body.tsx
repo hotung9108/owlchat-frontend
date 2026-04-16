@@ -290,7 +290,9 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                     <div
                                         className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all overflow-hidden
                                             ${
-                                                isMe
+                                                message.state === "REMOVED"
+                                                    ? "bg-background/50 text-muted-foreground rounded-2xl self-start max-w-[75%]"
+                                                    : isMe
                                                     ? "bg-primary text-primary-foreground rounded-br-none self-end max-w-[75%]"
                                                     : "bg-muted text-muted-foreground rounded-bl-none self-start max-w-[75%]"
                                             }
@@ -300,7 +302,12 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                             overflowWrap: "break-word",
                                         }}
                                     >
-                                        {message.type === "TEXT" &&
+                                        {message.state === "REMOVED" ? (
+                                            <p className="whitespace-pre-wrap leading-relaxed italic opacity-60">
+                                                This message was deleted
+                                            </p>
+                                        ) : (
+                                            <>{message.type === "TEXT" &&
                                             (editingMessageId === message.id ? (
                                                 <div className="flex flex-col gap-2 min-w-[200px] pr-8">
                                                     <textarea
@@ -425,11 +432,14 @@ const ChatBody = React.memo(React.forwardRef<HTMLDivElement, ChatBodyProps>(
                                                     return <p className="text-xs opacity-60">Location data unavailable</p>;
                                                 }
                                             })()
+                                        )}</>
                                         )}
 
-                                        <div className={`text-[10px] mt-1.5 opacity-60 font-semibold tracking-tighter ${isMe ? "text-right" : "text-left"}`}>
-                                            {new Date(message.sentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </div>
+                                        {message.state !== "REMOVED" && (
+                                            <div className={`text-[10px] mt-1.5 opacity-60 font-semibold tracking-tighter ${isMe ? "text-right" : "text-left"}`}>
+                                                {new Date(message.sentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {!isSystemMessage && (
