@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { userProfileService } from "@/services/user-profile-service"
-import { chatAdminService } from "@/services/chat-admin-service"
 import { useAccountService } from "@/hooks/use-account"
 import { useFriendshipAdminService } from "@/hooks/use-friendship-admin"
 import { useFriendRequestService } from "@/hooks/use-friend-request-admin"
