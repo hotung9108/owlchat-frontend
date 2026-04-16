@@ -35,7 +35,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 type ChatType       = "PRIVATE" | "GROUP"
 type MemberRole     = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER"
 type MessageState   = "ORIGIN" | "EDITED" | "REMOVED"
-type MessageType    = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE"
+type MessageType    = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE" | "LOCATION"
 
 type Chat = {
   id: string
@@ -142,11 +142,12 @@ function MessageStateBadge({ state }: { state: MessageState }) {
 
 function MessageTypeBadge({ type }: { type: MessageType }) {
   const map: Record<MessageType, string> = {
-    TEXT: "border-border bg-muted text-muted-foreground",
-    IMG: "border-purple-500/40 bg-purple-500/10 text-purple-600 dark:text-purple-400",
+    TEXT: "border-primary/40 bg-primary/10 text-primary",
+    IMG: "border-pink-500/40 bg-pink-500/10 text-pink-600 dark:text-pink-400",
    GENERIC_FILE: "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
-    VID: "border-pink-500/40 bg-pink-500/10 text-pink-600 dark:text-pink-400",
-    SYSTEM_MESSAGE: "border-cyan-500/40 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
+    VID: "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    SYSTEM_MESSAGE: "border-yellow-500/40 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+    LOCATION: "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400",
   }
   return <Badge variant="outline" className={`text-xs ${map[type]}`}>{type}</Badge>
 }
