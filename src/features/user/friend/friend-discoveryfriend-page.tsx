@@ -215,7 +215,7 @@ export default function FriendDiscoveryFriendPage() {
                                     className="gap-1"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
-                                    Previous
+                                    
                                 </Button>
 
                                 <div className="flex items-center gap-2 px-4">
@@ -243,7 +243,7 @@ export default function FriendDiscoveryFriendPage() {
                                     disabled={currentPageIndex >= totalPages - 1}
                                     className="gap-1"
                                 >
-                                    Next
+                                    
                                     <ChevronRight className="w-4 h-4" />
                                 </Button>
                             </div>
