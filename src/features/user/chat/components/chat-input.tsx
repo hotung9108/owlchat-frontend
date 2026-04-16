@@ -35,7 +35,6 @@ const EMOJI_CATEGORIES = {
     "⚽ Sports": ["⚽", "⚾", "🥎", "🎾", "🏐", "🏈", "🏉", "🥏", "🎳", "🏓", "🏸", "🏒", "🏑", "🥍", "🏏", "🥅", "⛳", "⛸️", "🎣", "🎽", "🎿", "⛷️", "🏂", "🪂", "🛼", "🛹", "⛹️", "🏋️", "🤼", "🤸", "🏃", "🚴", "🚵", "🤾", "🏌️"],
 };
 
-const EMOJI_LIST = Object.values(EMOJI_CATEGORIES).flat();
 
 type ChatInputProps = {
     onSendMessage: (message: string) => void;
