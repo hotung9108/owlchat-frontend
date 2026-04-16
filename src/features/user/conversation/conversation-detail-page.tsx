@@ -449,7 +449,9 @@ export default function ConversationDetailPage() {
                         ref={chatInfoRef}
                         type={chatType}
                         conversationId={conversationId} 
-                        currentUserId={profile?.id} 
+                        currentUserId={profile?.id}
+                        chatName={chatMetadata.name}
+                        chatAvatar={chatMetadata.avatar}
                         onClose={() => setIsSidebarOpen(false)} 
                     />
                 )}

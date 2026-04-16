@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
+import { useChatUser } from "@/hooks/use-chat-user";
 import UserAvatar from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
-import { X, Search, MoreVertical, Edit2, Shield, LogOut, Check, UserPlus } from "lucide-react";
+import { X, Search, MoreVertical, Edit2, Shield, LogOut, Check, UserPlus, Camera } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -19,6 +20,8 @@ type ChatInfoSidebarProps = {
     conversationId: string;
     currentUserId?: string;
     type: string;
+    chatName?: string;
+    chatAvatar?: string;
     onClose: () => void;
 };
 
@@ -33,7 +36,7 @@ const ROLE_RANK = {
 };
 
 const ChatInfoSidebar = forwardRef(function ChatInfoSidebar(
-    { type, conversationId, currentUserId, onClose }: ChatInfoSidebarProps,
+    { type, conversationId, currentUserId, chatName: initialChatName, chatAvatar: initialChatAvatar, onClose }: ChatInfoSidebarProps,
     ref
 ) {
     const navigate = useNavigate();
@@ -42,6 +45,13 @@ const ChatInfoSidebar = forwardRef(function ChatInfoSidebar(
     const [editingNicknameId, setEditingNicknameId] = useState<string | null>(null);
     const [editNicknameContent, setEditNicknameContent] = useState("");
 
+    // NEW: State for group name and avatar editing
+    const [editingGroupName, setEditingGroupName] = useState(false);
+    const [editingGroupNameContent, setEditingGroupNameContent] = useState(initialChatName || "");
+    const [editingGroupNameLoading, setEditingGroupNameLoading] = useState(false);
+    const [editingGroupAvatar, setEditingGroupAvatar] = useState(false);
+    const [editingGroupAvatarLoading, setEditingGroupAvatarLoading] = useState(false);
+
     const {
         getChatMembersByChatId,
         patchChatMemberRole,
@@ -49,6 +59,9 @@ const ChatInfoSidebar = forwardRef(function ChatInfoSidebar(
         deleteChatMember,
         postChatMember
     } = useChatMemberUser();
+
+    // NEW: Get chat user hook for name and avatar updates
+    const { patchChatName, patchChatAvatar } = useChatUser();
     
     const { fetchProfileById } = useUserProfile();
     const [loadingFriends, setLoadingFriends] = useState(false);
@@ -133,6 +146,50 @@ const ChatInfoSidebar = forwardRef(function ChatInfoSidebar(
 
     const canEditNickname = (memberRank: number, isMe: boolean) => {
         return isMe || currentUserRank > memberRank;
+    };
+
+    // NEW: Check if current user can edit group info
+    const canEditGroupInfo = currentUserRank >= ROLE_RANK["ADMIN"] && type === "GROUP";
+
+    // NEW: Handle updating group chat name
+    const handleUpdateGroupName = async () => {
+        if (!editingGroupNameContent.trim() || editingGroupNameContent === initialChatName) {
+            setEditingGroupName(false);
+            return;
+        }
+
+        try {
+            setEditingGroupNameLoading(true);
+            await patchChatName(null, null, conversationId, editingGroupNameContent.trim());
+            setEditingGroupName(false);
+        } catch (error) {
+            console.error("Failed to update group name:", error);
+            alert("Failed to update group name");
+        } finally {
+            setEditingGroupNameLoading(false);
+        }
+    };
+
+    // NEW: Handle updating group chat avatar
+    const handleUpdateGroupAvatar = async (file: File) => {
+        if (!file) return;
+
+        // Validate file size (10MB max)
+        if (file.size > 10 * 1024 * 1024) {
+            alert("File size exceeds 10MB limit");
+            return;
+        }
+
+        try {
+            setEditingGroupAvatarLoading(true);
+            await patchChatAvatar(null, null, conversationId, file);
+            setEditingGroupAvatar(false);
+        } catch (error) {
+            console.error("Failed to update group avatar:", error);
+            alert("Failed to update group avatar");
+        } finally {
+            setEditingGroupAvatarLoading(false);
+        }
     };
 
     const [open, setOpen] = useState(false);
@@ -233,6 +290,45 @@ const ChatInfoSidebar = forwardRef(function ChatInfoSidebar(
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-6">
+                
+                {/* NEW: Group Info Section (only for GROUP chats) */}
+                {type === "GROUP" && (
+                    <div className="flex flex-col gap-4 p-4 bg-muted/30 rounded-xl">
+                        {/* Group Avatar & Name */}
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="relative group">
+                                <UserAvatar name={initialChatName || "Group"} imageUrl={initialChatAvatar} size="lg" />
+                                {canEditGroupInfo && (
+                                    <button 
+                                        onClick={() => setEditingGroupAvatar(true)}
+                                        className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+                                    >
+                                        <Camera className="w-5 h-5 text-white" />
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex flex-col items-center gap-2">
+                                <h4 className="font-bold text-lg text-foreground max-w-[200px] text-center truncate">
+                                    {initialChatName}
+                                </h4>
+                                {canEditGroupInfo && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            setEditingGroupName(true);
+                                            setEditingGroupNameContent(initialChatName || "");
+                                        }}
+                                        className="gap-2"
+                                    >
+                                        <Edit2 className="w-3 h-3" />
+                                        Edit Name
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
                 {/* Actions */}
                 <div className="flex flex-col gap-2">
@@ -496,6 +592,79 @@ const ChatInfoSidebar = forwardRef(function ChatInfoSidebar(
             </Button>
             </DialogFooter>
         </DialogContent>
+        </Dialog>
+
+        {/* NEW: Dialog for editing group name */}
+        <Dialog open={editingGroupName} onOpenChange={setEditingGroupName}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Edit Group Name</DialogTitle>
+                    <DialogDescription>
+                        Change the name of this group chat.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="group-name">Group Name</Label>
+                        <Input
+                            id="group-name"
+                            value={editingGroupNameContent}
+                            onChange={(e) => setEditingGroupNameContent(e.target.value)}
+                            placeholder="Enter group name"
+                            maxLength={50}
+                            onKeyDown={(e) => e.key === 'Enter' && handleUpdateGroupName()}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                            {editingGroupNameContent.length}/50
+                        </span>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setEditingGroupName(false)}>
+                        Cancel
+                    </Button>
+                    <Button 
+                        onClick={handleUpdateGroupName}
+                        disabled={editingGroupNameLoading || !editingGroupNameContent.trim() || editingGroupNameContent === initialChatName}
+                    >
+                        {editingGroupNameLoading ? "Saving..." : "Save"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* NEW: Dialog for editing group avatar */}
+        <Dialog open={editingGroupAvatar} onOpenChange={setEditingGroupAvatar}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Change Group Avatar</DialogTitle>
+                    <DialogDescription>
+                        Upload a new image for this group (Max 10MB).
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="avatar-upload">Select Image</Label>
+                        <input
+                            id="avatar-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                    handleUpdateGroupAvatar(e.target.files[0]);
+                                }
+                            }}
+                            disabled={editingGroupAvatarLoading}
+                            className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setEditingGroupAvatar(false)}>
+                        Cancel
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
         </Dialog>
         </Card>
     );
