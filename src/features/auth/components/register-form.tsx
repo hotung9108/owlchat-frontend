@@ -37,17 +37,16 @@ export function RegisterForm({
             return;
         }
         if (password.length < 8) {
-            setError("Password must be at least 8 characters long.");
+            setError("Password must be at least 8 characters long, with at least 1 special characters and 1 numbers.");
             return;
         }
 
         setLoading(true);
         try {
-            // const response = await authService.signup({ email, username, password });
-            await authService.signup({ email, username, password });
-            // const accountId = response?.id;
-            // navigate("/authenticate", { state: { accountId, email } });
-            navigate("/login")
+            const response = await authService.signup({ email, username, password });
+            const accountId = response?.id;
+            navigate("/authenticate", { state: { accountId, email } });
+            // navigate("/login")
         } catch (err: any) {
             const message =
                 err?.response?.data?.message ??
@@ -147,7 +146,7 @@ export function RegisterForm({
                                     </Field>
                                 </Field>
                                 <FieldDescription>
-                                    Must be at least 8 characters long.
+                                    Must be at least 8 characters long, with at least 1 special characters and 1 numbers.
                                 </FieldDescription>
                             </Field>
 

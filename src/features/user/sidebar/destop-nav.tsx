@@ -14,9 +14,10 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNotification } from "@/hooks/use-notification";
 import { MessageSquare, UserPlus, Users, ShieldBan, Bell, CheckCheck } from "lucide-react";
+import { eventBus } from "@/lib/event-bus";
 
 function getTypeIcon(type: string) {
     switch (type) {
@@ -56,6 +57,18 @@ export default function DesktopNav() {
         }, 30000);
         return () => clearInterval(interval);
     }, []);
+
+    const prevHasUnreadSocial = useRef(false);
+
+    useEffect(() => {
+        const hasUnreadSocial = notifications.some(
+            (n) => !n.isRead && ["FRIEND_REQUEST", "FRIENDSHIP", "BLOCK"].includes(n.type)
+        );
+        if (hasUnreadSocial && hasUnreadSocial !== prevHasUnreadSocial.current) {
+            eventBus.emit("social", {message: ""});
+        }
+        prevHasUnreadSocial.current = hasUnreadSocial;
+    }, [notifications]);
 
     const handleLogout = async () => {
         try {

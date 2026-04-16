@@ -36,6 +36,10 @@ export const chatAdminService = {
   getChats: (params?: ChatQueryParams) => {
     return apiClient.get(CHAT_API, { params });
   },
+  // GET /admin/chat/member
+  getChatsByMemberId: (memberId: string, params?: ChatQueryParams) => {
+    return apiClient.get(`${CHAT_API}/member/${memberId}`, { params });
+  },
 
   // GET /admin/chat/{chatId}
   getChatById: (chatId: string) => {
