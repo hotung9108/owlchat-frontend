@@ -8,6 +8,8 @@ import { useUserProfileContext } from "@/providers/user-profile-provider";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import type { UserProfile } from "@/types/user-profile.type";
 import LoadingLogo from "@/components/shared/loading-logo";
+import { useNavigate } from "react-router-dom";
+import { eventBus } from "@/lib/event-bus";
 
 const DiscoveryFriendCard = ({
     profile,
@@ -16,6 +18,7 @@ const DiscoveryFriendCard = ({
     profile: UserProfile;
     onAddFriend: (id: string) => void;
 }) => {
+    const navigator = useNavigate();
     const { fetchAvatar } = useUserProfile();
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
@@ -74,7 +77,7 @@ const DiscoveryFriendCard = ({
                     >
                         Add Friend
                     </Button>
-                    <Button className="px-4 py-2">Profile</Button>
+                    <Button className="px-4 py-2" onClick={() => {navigator(`/profile/${profile.id}`)}} >Profile</Button>
                 </div>
                 <div>
                     <Button variant="ghost" className="">
@@ -107,6 +110,14 @@ export default function FriendDiscoveryFriendPage() {
     // Load all profiles on mount
     useEffect(() => {
         fetchAllProfiles();
+        
+        const handleSocial = () => {
+            fetchAllProfiles();
+        };
+        eventBus.on("social", handleSocial);
+        return () => {
+            eventBus.off("social", handleSocial);
+        };
     }, [fetchAllProfiles]);
     
     // Filter profiles based on search term and exclude current user

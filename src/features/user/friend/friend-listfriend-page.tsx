@@ -4,8 +4,8 @@ import LoadingLogo from "@/components/shared/loading-logo";
 import ErrorLogo from "@/components/shared/error-logo";
 import { useFriendship } from "@/hooks/use-friendship";
 import { useUserProfileContext } from "@/providers/user-profile-provider";
-// import FriendCard from "./FriendCard";
 import FriendCard from "./friend-listfriend-card";
+import { eventBus } from "@/lib/event-bus";
 
 export default function FriendListFriendPage() {
     const {
@@ -16,6 +16,14 @@ export default function FriendListFriendPage() {
 
     useEffect(() => {
         fetchFriendships();
+        
+        const handleSocial = () => {
+            fetchFriendships();
+        };
+        eventBus.on("social", handleSocial);
+        return () => {
+            eventBus.off("social", handleSocial);
+        };
     }, [fetchFriendships]);
     // useEffect(()=>{
     //     console.log(profile)

@@ -9,6 +9,9 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useWebSocket } from "@/providers/websocket-provider"
+import { useUserProfileContext } from "@/providers/user-profile-provider"
+import { showBrowserNotification } from "@/utils/notification"
 import { Separator } from "@/components/ui/separator"
 import {
   Sheet,
@@ -108,6 +111,43 @@ function SidebarProvider({
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [toggleSidebar])
+
+  const { subscribeToTopic } = useWebSocket()
+  const { profile } = useUserProfileContext()
+
+  // Browser notification listener
+  React.useEffect(() => {
+    if (!profile?.id) return
+
+    // Request notification permission if not already granted
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission()
+    }
+
+    // Subscribe to personal notification topic
+    const destination = `/topic/user.${profile.id}.notifications`
+    // We also listen for general chat notifications if they aren't handled elsewhere
+    // but the request was specifically for "ws notification"
+    
+    let subscription: any = null;
+    
+    try {
+      subscription = subscribeToTopic(destination, (notification: any) => {
+        showBrowserNotification(notification.title || "New Notification", {
+          body: notification.content || notification.message || "You have a new message",
+          icon: "/favicon.ico",
+        });
+      })
+    } catch (error) {
+      console.warn("Failed to subscribe to notifications topic:", error);
+    }
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe()
+      }
+    }
+  }, [profile?.id, subscribeToTopic])
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.

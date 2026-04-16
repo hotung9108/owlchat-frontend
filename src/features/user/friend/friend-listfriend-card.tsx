@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { User, Trash2 } from "lucide-react";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useFriendship } from "@/hooks/use-friendship";
+import { useNavigate } from "react-router-dom";
 
 type FriendCardProps = {
     friendId: string;
@@ -11,6 +12,7 @@ type FriendCardProps = {
 };
 
 export default function FriendCard({ friendId, friendshipId }: FriendCardProps) {
+    const navigator = useNavigate();
     const { fetchProfileById, fetchAvatar, loading, error } = useUserProfile();
     const { deleteFriendship, fetchFriendshipWithUser } = useFriendship();
     const [friendProfile, setFriendProfile] = useState<any>(null);
@@ -105,7 +107,12 @@ export default function FriendCard({ friendId, friendshipId }: FriendCardProps) 
             </div>
             <div className="mt-4 flex justify-between items-center gap-2">
                 <div className="flex gap-2">
-                    <Button className="px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary-foreground hover:text-secondary">Profile</Button>
+                    <Button 
+                        className="px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary-foreground hover:text-secondary"
+                        onClick={() => {navigator(`/profile/${friendId}`)}}
+                    >
+                        Profile
+                    </Button>
                 </div>
                 <Button
                     variant="ghost"

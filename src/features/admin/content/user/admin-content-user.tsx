@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { userProfileService } from "@/services/user-profile-service"
-import { chatAdminService } from "@/services/chat-admin-service"
 import { useAccountService } from "@/hooks/use-account"
 import { useFriendshipAdminService } from "@/hooks/use-friendship-admin"
 import { useFriendRequestService } from "@/hooks/use-friend-request-admin"
 import { useBlockService } from "@/hooks/use-block-admin"
 import { useUserProfile } from "@/hooks/use-user-profile"
+import { useChatAdminService } from "@/hooks/use-chat-admin"
 import { useMemberAdminService } from "@/hooks/use-chat-member-admin"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -126,6 +126,7 @@ export default function AdminContentUser() {
   {/* NEW HOOK */}
   const { fetchProfileById } = useUserProfile()
   const { remove: removeChatMember } = useMemberAdminService()
+  const { chats: apiChats, fetchChatsByMemberId, loading: chatsLoading } = useChatAdminService()
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [user, setUser]                   = useState<UserProfile>(INITIAL_USER)
@@ -164,7 +165,6 @@ export default function AdminContentUser() {
 
   const [chats, setChats]                 = useState<Chat[]>([])
   const [chatsLoaded, setChatsLoaded]     = useState(false)
-  const [chatsLoading, setChatsLoading]   = useState(false)
 
   const { friendships, fetchByUser: fetchFriendships, loading: friendshipsLoading } = useFriendshipAdminService()
   const [friendshipsLoaded, setFriendshipsLoaded] = useState(false)
@@ -205,33 +205,27 @@ export default function AdminContentUser() {
 
   useEffect(() => {
     if (activeTab === "chats" && !chatsLoaded && id) {
-      const fetchChats = async () => {
-        try {
-          setChatsLoading(true)
-          const response = await chatAdminService.getChats({ initiatorId: id })
-          const chatData = response.data?.content || response.data || []
-          setChats(chatData.map((c: any) => ({
-            id: c.id,
-            status: c.status ?? true,
-            type: c.type || "PRIVATE",
-            name: c.name || "Unknown",
-            avatar: c.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.id}`,
-            initiator_id: c.initiatorId || c.initiator_id,
-            newest_message_id: c.newestMessageId || c.newest_message_id,
-            newest_message_date: c.newestMessageDate || c.newest_message_date,
-            created_date: c.createdDate || c.created_date,
-            updated_date: c.updatedDate || c.updated_date,
-          })))
-          setChatsLoaded(true)
-        } catch (err) {
-          console.error("Failed to load user chats", err)
-        } finally {
-          setChatsLoading(false)
-        }
-      }
-      fetchChats()
+      fetchChatsByMemberId(id).then(() => setChatsLoaded(true))
     }
-  }, [activeTab, chatsLoaded, id])
+  }, [activeTab, chatsLoaded, id, fetchChatsByMemberId])
+
+  useEffect(() => {
+    if (apiChats) {
+      const chatData = apiChats || []
+      setChats(chatData.map((c: any) => ({
+        id: c.id,
+        status: c.status ?? true,
+        type: c.type || "PRIVATE",
+        name: c.name || "Unknown",
+        avatar: c.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.id}`,
+        initiator_id: c.initiatorId || c.initiator_id,
+        newest_message_id: c.newestMessageId || c.newest_message_id,
+        newest_message_date: c.newestMessageDate || c.newest_message_date,
+        created_date: c.createdDate || c.created_date,
+        updated_date: c.updatedDate || c.updated_date,
+      })))
+    }
+  }, [apiChats])
 
   useEffect(() => {
     if (activeTab === "friends" && !friendshipsLoaded && id) {
@@ -656,7 +650,7 @@ export default function AdminContentUser() {
                                 }}
                                 className="text-xs px-3 py-1.5 rounded-md border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
                               >
-                                Leave
+                                Kick out
                               </button>
                             </TableCell>
                           </TableRow>
