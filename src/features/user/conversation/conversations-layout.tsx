@@ -34,7 +34,7 @@ export default function ConversationsLayout({ children }: Props) {
     // Memoized fetch function
     const fetchConversationsData = useCallback(async () => {
         try {
-            const data = await getChatsByMemberId(null, null, "", 0, 10, false);
+            const data = await getChatsByMemberId(null, null, "", -1, 10, false);
             
             // Batch fetch member names - limit concurrent requests
             const conversationsWithMembers = await Promise.all(
