@@ -4,11 +4,14 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar"
 import type { UserInfor } from "../configs/admin-sidebar.config"
+import { API_ENDPOINTS } from "@/config/api";
 
 interface Props {
     user_infor: UserInfor,
     onClick: () => void
 }
+
+const USER_PROFILE_BASE_URL = `${API_ENDPOINTS.USER_SERVICE}/user`;
 
 export default function AdminSidebarUser({user_infor, onClick} : Props) {
     
@@ -26,7 +29,12 @@ export default function AdminSidebarUser({user_infor, onClick} : Props) {
         }}
         >
             <Avatar className="h-8 w-8">
-                <AvatarImage src={user_infor.avatar} alt="Account avatar" />
+                <AvatarImage 
+                    src={`${USER_PROFILE_BASE_URL}/${user_infor.id}/avatar`} 
+                    alt="Account avatar" 
+                    onError={(e) => {
+                        e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user_infor.id}`;
+                      }}/>
                 <AvatarFallback>OM</AvatarFallback>
             </Avatar>
 

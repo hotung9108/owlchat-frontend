@@ -29,6 +29,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { API_ENDPOINTS } from "@/config/api"
+
+const USER_PROFILE_BASE_URL = `${API_ENDPOINTS.USER_SERVICE}/user`;
+
+const CHAT_API = `${API_ENDPOINTS.CHAT_SERVICE}/admin/chat`;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -512,7 +517,13 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
 
             {/* Avatar */}
             <Avatar className="w-16 h-16 border-2 border-border shrink-0">
-              <AvatarImage src={chat.avatar} />
+              <AvatarImage  
+                src={`${CHAT_API}/${chat.id}/avatar`}
+                alt={chat.name}
+                onError={(e) => {
+                  e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.id}`;
+                }}
+              />
               <AvatarFallback className="text-xl bg-muted">{chat.name?.[0] ?? "?"}</AvatarFallback>
             </Avatar>
 
@@ -584,7 +595,7 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                   ) : members.map((m, i) => {
                     const userProfile = usersById[m.member_id]
                     const displayName   = userProfile?.name    || m.member_name
-                    const displayAvatar = userProfile?.avatar  || m.member_avatar
+                    // const displayAvatar = userProfile?.avatar  || m.member_avatar
                     const inviterProfile = m.inviter_id ? usersById[m.inviter_id] : null
                     const inviterName   = inviterProfile?.name  || m.inviter_name
                     return (
@@ -611,7 +622,13 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                           className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition"
                         >
                           <Avatar className="w-7 h-7 border border-border shrink-0">
-                            <AvatarImage src={displayAvatar} />
+                            <AvatarImage 
+                              src={`${USER_PROFILE_BASE_URL}/${m.member_id}/avatar`}
+                              alt={displayName}
+                              onError={(e) => {
+                                e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.member_id}`;
+                              }}
+                            />
                             <AvatarFallback className="text-xs bg-muted">
                               {displayName?.[0] ?? "?"}
                             </AvatarFallback>
@@ -692,7 +709,7 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                   ) : messages.map((msg, i) => {
                     const senderProfile = usersById[msg.sender_id]
                     const senderName   = senderProfile?.name   || msg.sender_name
-                    const senderAvatar = senderProfile?.avatar || msg.sender_avatar
+                    // const senderAvatar = senderProfile?.avatar || msg.sender_avatar
                     return (
                     <TableRow key={msg.id} onClick={() => navigate(`/admin/message/${msg.id}`)} className={`border-b border-border hover:bg-accent transition-colors cursor-pointer ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
                       {/* ID */}
@@ -703,7 +720,13 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                       <TableCell className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Avatar className="w-6 h-6 border border-border shrink-0">
-                            <AvatarImage src={senderAvatar} />
+                            <AvatarImage 
+                              src={`${USER_PROFILE_BASE_URL}/${msg.sender_id}/avatar`}
+                              alt={senderName}
+                              onError={(e) => {
+                                e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.sender_id}`;
+                              }}
+                            />
                             <AvatarFallback className="text-xs bg-muted">{senderName[0]}</AvatarFallback>
                           </Avatar>
                           <div>
