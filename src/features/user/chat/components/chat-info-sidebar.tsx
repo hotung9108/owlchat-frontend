@@ -61,10 +61,22 @@ const ChatInfoSidebar = forwardRef(function ChatInfoSidebar(
     } = useChatMemberUser();
 
     // NEW: Get chat user hook for name and avatar updates
-    const { patchChatName, patchChatAvatar } = useChatUser();
+    const { patchChatName, patchChatAvatar, getChatAvatar } = useChatUser();
     
     const { fetchProfileById } = useUserProfile();
     const [loadingFriends, setLoadingFriends] = useState(false);
+
+    // NEW: State to manage current avatar URL
+    const [currentAvatarUrl, setCurrentAvatarUrl] = useState(initialChatAvatar);
+
+    // Cleanup blob URLs on unmount
+    useEffect(() => {
+        return () => {
+            if (currentAvatarUrl && currentAvatarUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(currentAvatarUrl);
+            }
+        };
+    }, []);
 
     const fetchMembers = useCallback(async () => {
         try {
@@ -183,6 +195,16 @@ const ChatInfoSidebar = forwardRef(function ChatInfoSidebar(
         try {
             setEditingGroupAvatarLoading(true);
             await patchChatAvatar(null, null, conversationId, file);
+            
+            // Fetch new avatar after upload
+            try {
+                const newAvatarBlob = await getChatAvatar(null, null, conversationId);
+                const newAvatarUrl = URL.createObjectURL(newAvatarBlob);
+                setCurrentAvatarUrl(newAvatarUrl);
+            } catch (avatarErr) {
+                console.debug("[ChatInfo] New avatar not available:", avatarErr);
+            }
+            
             setEditingGroupAvatar(false);
         } catch (error) {
             console.error("Failed to update group avatar:", error);
@@ -297,7 +319,7 @@ const ChatInfoSidebar = forwardRef(function ChatInfoSidebar(
                         {/* Group Avatar & Name */}
                         <div className="flex flex-col items-center gap-3">
                             <div className="relative group">
-                                <UserAvatar name={initialChatName || "Group"} imageUrl={initialChatAvatar} size="lg" />
+                                <UserAvatar name={initialChatName || "Group"} imageUrl={currentAvatarUrl} size="lg" />
                                 {canEditGroupInfo && (
                                     <button 
                                         onClick={() => setEditingGroupAvatar(true)}

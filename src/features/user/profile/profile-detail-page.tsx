@@ -2,12 +2,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import ProfileContainer from "./profile-container";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { ProfileFriends } from "./components/profile-friends";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { UserProfile } from "@/types/user-profile.type";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Mail, Phone, CalendarDays } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { userProfileService } from "@/services/user-profile-service";
 
 export default function ProfileDetailPage() {
   const { userId } = useParams();
@@ -15,6 +16,8 @@ export default function ProfileDetailPage() {
   const { fetchProfileById } = useUserProfile();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
+  const blobUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -27,6 +30,20 @@ export default function ProfileDetailPage() {
         const data = await fetchProfileById(userId);
         if (data) {
           setProfile(data);
+          
+          // Fetch actual avatar blob instead of using string URL
+          try {
+            const avatarBlob = await userProfileService.getUserAvatar(userId);
+            const blobUrl = URL.createObjectURL(avatarBlob);
+            if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+              URL.revokeObjectURL(blobUrlRef.current);
+            }
+            blobUrlRef.current = blobUrl;
+            setAvatarUrl(blobUrl);
+          } catch (err) {
+            // Avatar not available, will show fallback
+            console.debug("Avatar not available for user:", userId);
+          }
         } else {
           navigate("/profile");
         }
@@ -40,6 +57,15 @@ export default function ProfileDetailPage() {
 
     loadProfile();
   }, [userId, navigate, fetchProfileById]);
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
+    };
+  }, []);
 
   const getInitials = () => {
     if (!profile?.name) return "U";
@@ -108,7 +134,7 @@ export default function ProfileDetailPage() {
             <div className="-mt-[3.5rem] relative z-20 shrink-0">
                 <div className="relative inline-block">
                     <Avatar className="h-[140px] w-[140px] rounded-full border-[6px] border-background shadow-md bg-white">
-                        <AvatarImage src={profile?.avatar ?? undefined} className="object-cover" />
+                        <AvatarImage src={avatarUrl} className="object-cover" />
                         <AvatarFallback className="text-xl font-bold">{getInitials()}</AvatarFallback>
                     </Avatar>
                     <span className="absolute bottom-3 right-3 h-7 w-7 rounded-full border-[4px] border-background bg-green-500 shadow-sm"></span>
