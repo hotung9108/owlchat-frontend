@@ -35,6 +35,7 @@ export default function ConversationDetailPage() {
         loading,
         getMessagesByChatId,
         // postNewTextMessage,
+        // postNewLocationMessage,
         postNewFileMessage,
         putTextMessage,
         softDeleteMessage,
@@ -372,6 +373,15 @@ export default function ConversationDetailPage() {
                 profile.id,
                 "LOCATION"
             );
+
+            // postNewLocationMessage(
+            //     optimisticMessage.senderId, 
+            //     optimisticMessage.senderId, 
+            //     {
+            //         chatId: optimisticMessage.chatId, 
+            //         content: optimisticMessage.content
+            //     }
+            // );
 
             console.log("[Chat] ✓ Location shared via WebSocket (optimistic ID: " + tempId + ")");
         } catch (err) {

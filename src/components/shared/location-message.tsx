@@ -6,25 +6,21 @@ import { Button } from '@/components/ui/button';
 interface LocationMessageProps {
     location: LocationData;
     isMe?: boolean;
-    onViewMap?: (location: LocationData) => void;
 }
 
 export const LocationMessage = React.memo(function LocationMessage(
-    { location, isMe = false, onViewMap }: LocationMessageProps
+    { location, isMe = false }: LocationMessageProps
 ) {
-    const handleViewMap = () => {
-        onViewMap?.(location);
-    };
 
     const googleMapsUrl = `https://www.google.com/maps/search/${location.latitude},${location.longitude}`;
     const mapboxUrl = `https://maps.mapbox.com/?marker=${location.longitude},${location.latitude}`;
 
     return (
         <div
-            className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all overflow-hidden
+            className={`group relative p-3 rounded-2xl text-sm break-words shadow-sm transition-all overflow-hidden w-full
                 ${isMe
-                    ? 'bg-primary text-primary-foreground rounded-br-none self-end max-w-[75%]'
-                    : 'bg-muted text-muted-foreground rounded-bl-none self-start max-w-[75%]'
+                    ? 'bg-primary text-primary-foreground rounded-br-none'
+                    : 'bg-muted text-muted-foreground rounded-bl-none'
                 }
             `}
             style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
@@ -83,15 +79,6 @@ export const LocationMessage = React.memo(function LocationMessage(
 
             {/* Action Buttons */}
             <div className="flex gap-1 mt-3 pt-2 border-t border-current border-opacity-20">
-                <Button
-                    size="sm"
-                    variant="ghost"
-                    className={`h-7 text-xs gap-1 ${isMe ? 'text-primary-foreground hover:bg-primary-foreground/20' : 'text-primary hover:bg-primary/10'}`}
-                    onClick={handleViewMap}
-                >
-                    <MapPin className="w-3 h-3" />
-                    View Map
-                </Button>
                 <Button
                     size="sm"
                     variant="ghost"
