@@ -78,6 +78,17 @@ export const messageUserService = {
     return response.data;
   },
 
+  async postNewLocationMessage(
+    accountId: string | null = null,
+    requesterId: string | null = null,
+    textMessageRequest: TextMessageUserRequest
+  ): Promise<any> {
+    const headers = accountId ? { "X-Account-Id": accountId } : undefined;
+    const params = { requesterId };
+    const response = await apiClient.post(`${MESSAGE_BASE_URL}/location`, textMessageRequest, { headers, params });
+    return response.data;
+  },
+
   async postNewFileMessage(
     accountId: string | null = null,
     requesterId: string | null = null,

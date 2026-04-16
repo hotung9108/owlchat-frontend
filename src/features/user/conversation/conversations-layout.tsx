@@ -10,6 +10,7 @@ import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useUserProfileContext } from "@/providers/user-profile-provider";
 import { useWebSocket } from "@/providers/websocket-provider";
+import { showBrowserNotification } from "@/utils/notification";
 
 type Props = React.PropsWithChildren<{}>;
 
@@ -111,6 +112,14 @@ export default function ConversationsLayout({ children }: Props) {
                         updated.unshift(movedChat);
                         return updated;
                     });
+
+                    // Trigger browser notification for messages from others
+                    if (notification.data?.senderId !== profile?.id) {
+                        showBrowserNotification(`New message from ${chat.username}`, {
+                            body: notification.data?.content || "Sent an attachment",
+                            icon: chat.imageUrl || "/favicon.ico",
+                        });
+                    }
                 }
             });
             subscriptions.push(subscription);
