@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { User, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState, useCallback, memo } from "react";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { useMessageUser } from "@/hooks/use-chat-message-user";
@@ -24,6 +24,8 @@ export default memo(function ConversationItem({
     currentUserId,
     isGroup = false,
 }: Props) {
+    const location = useLocation();
+    const isSelected = location.pathname === `/conversations/${id}`;
     const { getChatMembersByChatId } = useChatMemberUser();
     const { getMessageById } = useMessageUser();
     const [displayName, setDisplayName] = useState(username);
@@ -103,7 +105,9 @@ export default memo(function ConversationItem({
 
     return (
         <Link to={`/conversations/${id}`} className="w-full">
-            <Card className="p-2 flex flex-row items-center gap-4 truncate w-[95%] mx-auto transition-[color,box-shadow] hover:shadow-md hover:ring-1 hover:ring-ring/50">
+            <Card className={`p-2 flex flex-row items-center gap-4 truncate w-[95%] mx-auto transition-[color,box-shadow,background-color] hover:shadow-md hover:ring-1 hover:ring-ring/50 ${
+                isSelected ? "bg-primary/25 dark:bg-primary/20" : ""
+            }`}>
                 <div className="flex flex-row items-center gap-4 truncate w-full">
                     <Avatar>
                         <AvatarImage src={displayAvatar} />
