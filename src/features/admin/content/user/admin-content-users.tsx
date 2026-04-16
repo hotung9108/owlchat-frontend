@@ -46,8 +46,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label"
 import { accountService } from "@/services/real-account-service"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { API_ENDPOINTS } from "@/config/api"
 
 const PAGE_SIZE = 10
+
+const USER_PROFILE_BASE_URL = `${API_ENDPOINTS.USER_SERVICE}/user`;
 
 export default function UsersManager() {
   const [users, setUsers]         = useState<UserProfile[]>([])
@@ -300,9 +303,12 @@ export default function UsersManager() {
                 >
                   <TableCell className="px-4 py-2.5">
                     <img
-                      src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`}
+                      src={`${USER_PROFILE_BASE_URL}/${user.id}/avatar`}
                       alt={user.name}
                       className="w-8 h-8 rounded-full border border-border object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+                      }}
                     />
                   </TableCell>
                   <TableCell className="px-4 py-2.5">

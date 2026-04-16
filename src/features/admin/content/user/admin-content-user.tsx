@@ -39,6 +39,11 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
+import { API_ENDPOINTS } from "@/config/api"
+
+const USER_PROFILE_BASE_URL = `${API_ENDPOINTS.USER_SERVICE}/user`;
+
+const CHAT_API = `${API_ENDPOINTS.CHAT_SERVICE}/admin/chat`;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -84,11 +89,17 @@ const INITIAL_USER: UserProfile = {
 
 // ── Helper Components ─────────────────────────────────────────────────────────
 
-function UserCell({ name, avatar, id }: { name: string; avatar: string; id: string }) {
+function UserCell({ name, id }: { name: string; avatar: string; id: string }) {
   return (
     <div className="flex items-center gap-2.5">
       <Avatar className="w-7 h-7 border border-border">
-        <AvatarImage src={avatar} />
+        <AvatarImage 
+          src={`${USER_PROFILE_BASE_URL}/${id}/avatar`}
+          alt={name}
+          onError={(e) => {
+            e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`;
+          }}
+        />
         <AvatarFallback className="text-xs bg-muted">{name[0]}</AvatarFallback>
       </Avatar>
       <div>
@@ -124,7 +135,7 @@ export default function AdminContentUser() {
   const navigate = useNavigate()
   const { updateStatus, updateRole } = useAccountService()
   {/* NEW HOOK */}
-  const { fetchProfileById } = useUserProfile()
+  const { fetchProfileById, uploadAvatar } = useUserProfile()
   const { remove: removeChatMember } = useMemberAdminService()
   const { chats: apiChats, fetchChatsByMemberId, loading: chatsLoading } = useChatAdminService()
 
@@ -275,6 +286,8 @@ export default function AdminContentUser() {
 
   // Edit dialog
   const [editOpen, setEditOpen]           = useState(false)
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null)
+  const [avatarTimestamp, setAvatarTimestamp] = useState(Date.now())
   const [editForm, setEditForm]           = useState<Omit<UserProfile, "id" | "created_date" | "updated_date">>({
     status:        user.status,
     role:          user.role,
@@ -297,6 +310,7 @@ export default function AdminContentUser() {
 
   const openEdit = () => {
     // reset form to current user values each time dialog opens
+    setSelectedAvatarFile(null)
     setEditForm({
       status:        user.status,
       role:          user.role,
@@ -312,6 +326,13 @@ export default function AdminContentUser() {
 
   const handleSaveEdit = async () => {
     try {
+      // 1. Upload avatar if selected
+      if (selectedAvatarFile) {
+        await uploadAvatar(user.id, selectedAvatarFile)
+        setAvatarTimestamp(Date.now())
+      }
+
+      // 2. Update profile
       await userProfileService.updateProfile(user.id, {
         name: editForm.name,
         gender: editForm.gender,
@@ -424,7 +445,13 @@ export default function AdminContentUser() {
             <div className="px-6 pb-6">
               <div className="flex items-end justify-between -mt-10 mb-4">
                 <Avatar className="w-20 h-20 border-4 border-background shadow-md">
-                  <AvatarImage src={user.avatar} />
+                  <AvatarImage 
+                    src={`${USER_PROFILE_BASE_URL}/${user.id}/avatar?t=${avatarTimestamp}`}
+                    alt={user.name}
+                    onError={(e) => {
+                      e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+                    }}
+                  />
                   <AvatarFallback className="text-xl bg-muted">{user.name[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex gap-2 pb-1">
@@ -621,7 +648,13 @@ export default function AdminContentUser() {
                             <TableCell className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <Avatar className="w-7 h-7 border border-border">
-                                  <AvatarImage src={c.avatar} />
+                                  <AvatarImage  
+                                    src={`${CHAT_API}/${c.id}/avatar`}
+                                    alt={c.name}
+                                    onError={(e) => {
+                                      e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.id}`;
+                                    }}
+                                  />
                                   <AvatarFallback className="text-xs bg-muted">{c.name?.[0] || '?'}</AvatarFallback>
                                 </Avatar>
                                 <span className="text-xs font-medium text-foreground whitespace-nowrap">{c.name}</span>
@@ -764,7 +797,7 @@ export default function AdminContentUser() {
 
                     {/* Avatar preview */}
                     <Avatar className="w-14 h-14 border border-border shrink-0">
-                    <AvatarImage src={editForm.avatar} />
+                    <AvatarImage src={editForm.avatar} />  
                     <AvatarFallback className="text-lg bg-muted">{editForm.name[0]}</AvatarFallback>
                     </Avatar>
 
@@ -787,6 +820,7 @@ export default function AdminContentUser() {
                         }
 
                         setAvatarError("")
+                        setSelectedAvatarFile(file)
 
                         // convert to base64 so we can preview it
                         const reader = new FileReader()
