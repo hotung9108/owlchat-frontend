@@ -8,7 +8,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, Users, MessageSquare, Flag, UserPlus } from "lucide-react"
+import { CalendarIcon, Users, MessageSquare, Flag, UserPlus, RefreshCwIcon } from "lucide-react"
 import { format, subDays, parseISO } from "date-fns"
 import type { DateRange } from "react-day-picker"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
@@ -209,6 +209,10 @@ export default function AdminDashboard() {
 
   // Load totals and gender
   useEffect(() => {
+    loadTotalsAndGender()
+  }, [])
+
+  const loadTotalsAndGender = () => {
     getUsersTotal().then(res => setTotalUsers(res.data.users)).catch(console.error)
     getMessagesTotal().then(res => setTotalMessages(res.data.messages)).catch(console.error)
     getReportsTotal().then(res => setTotalReports(res.data.reports)).catch(console.error)
@@ -231,47 +235,76 @@ export default function AdminDashboard() {
       }))
       setGenderData(mapped)
     }).catch(console.error)
-  }, [])
+  }
 
   // Load users trend
   useEffect(() => {
+    loadUsersTrend()
+  }, [rangeUsers])
+
+  const loadUsersTrend = () => {
     let from, to
     if (rangeUsers?.from) from = formatDate(rangeUsers.from)
     if (rangeUsers?.to) to = formatDate(rangeUsers.to)
     getUsersStats(from, to).then(res => setUsersData(res.data.data)).catch(console.error)
-  }, [rangeUsers])
+  }
 
   // Load messages trend
   useEffect(() => {
+    loadMessagesTrend()
+  }, [rangeMessages])
+
+  const loadMessagesTrend = () => {
     let from, to
     if (rangeMessages?.from) from = formatDate(rangeMessages.from)
     if (rangeMessages?.to) to = formatDate(rangeMessages.to)
     getMessagesStats(from, to).then(res => setMessagesData(res.data.data)).catch(console.error)
-  }, [rangeMessages])
+  }
 
   // Load reports trend
   useEffect(() => {
+    loadReportsTrend()
+  }, [rangeReports])
+
+  const loadReportsTrend = () => {
     let from, to
     if (rangeReports?.from) from = formatDate(rangeReports.from)
     if (rangeReports?.to) to = formatDate(rangeReports.to)
     getReportsStats(from, to).then(res => setReportsData(res.data.data)).catch(console.error)
-  }, [rangeReports])
+  }
 
   // Load new users trend
   useEffect(() => {
+    loadNewUsersTrend()
+  }, [rangeNewUsers])
+
+  const loadNewUsersTrend = () => {
     let from, to
     if (rangeNewUsers?.from) from = formatDate(rangeNewUsers.from)
     if (rangeNewUsers?.to) to = formatDate(rangeNewUsers.to)
     getUsersGrowth(from, to).then(res => setNewUsersData(res.data.data)).catch(console.error)
-  }, [rangeNewUsers])
+  }
 
   // Load social trend
   useEffect(() => {
+    loadSocialTrend()
+  }, [rangeSocial])
+
+  const loadSocialTrend = () => {
     let from, to
     if (rangeSocial?.from) from = formatDate(rangeSocial.from)
     if (rangeSocial?.to) to = formatDate(rangeSocial.to)
     getSocialGrowth(from, to).then(res => setSocialData(res.data.data)).catch(console.error)
-  }, [rangeSocial])
+  }
+
+  const refresh = () => {
+    loadTotalsAndGender()
+    loadUsersTrend()
+    loadMessagesTrend()
+    loadReportsTrend()
+    loadNewUsersTrend()
+    loadSocialTrend()
+  };
 
   const tick = (data: { date: string }[]) => {
     const n = data.length
@@ -288,6 +321,16 @@ export default function AdminDashboard() {
       <AdminContentTopBar
         icon={<Icons.Analytics />}
         title="Statistics"
+        buttons={[
+          {
+            label: "Refresh",
+            icon: <RefreshCwIcon size={14} />,
+            colorClass: "bg-primary text-primary hover:text-primary cursor-pointer",
+            onClick: () => {
+              refresh()
+            },
+          },
+        ]}
       ></AdminContentTopBar>
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
 

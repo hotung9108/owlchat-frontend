@@ -29,13 +29,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { API_ENDPOINTS } from "@/config/api"
+
+const USER_PROFILE_BASE_URL = `${API_ENDPOINTS.USER_SERVICE}/user`;
+
+const CHAT_API = `${API_ENDPOINTS.CHAT_SERVICE}/admin/chat`;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type ChatType       = "PRIVATE" | "GROUP"
 type MemberRole     = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER"
 type MessageState   = "ORIGIN" | "EDITED" | "REMOVED"
-type MessageType    = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE"
+type MessageType    = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE" | "LOCATION"
 
 type Chat = {
   id: string
@@ -142,11 +147,12 @@ function MessageStateBadge({ state }: { state: MessageState }) {
 
 function MessageTypeBadge({ type }: { type: MessageType }) {
   const map: Record<MessageType, string> = {
-    TEXT: "border-border bg-muted text-muted-foreground",
-    IMG: "border-purple-500/40 bg-purple-500/10 text-purple-600 dark:text-purple-400",
+    TEXT: "border-primary/40 bg-primary/10 text-primary",
+    IMG: "border-pink-500/40 bg-pink-500/10 text-pink-600 dark:text-pink-400",
    GENERIC_FILE: "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
-    VID: "border-pink-500/40 bg-pink-500/10 text-pink-600 dark:text-pink-400",
-    SYSTEM_MESSAGE: "border-cyan-500/40 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
+    VID: "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    SYSTEM_MESSAGE: "border-yellow-500/40 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+    LOCATION: "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400",
   }
   return <Badge variant="outline" className={`text-xs ${map[type]}`}>{type}</Badge>
 }
@@ -511,7 +517,13 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
 
             {/* Avatar */}
             <Avatar className="w-16 h-16 border-2 border-border shrink-0">
-              <AvatarImage src={chat.avatar} />
+              <AvatarImage  
+                src={`${CHAT_API}/${chat.id}/avatar`}
+                alt={chat.name}
+                onError={(e) => {
+                  e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.id}`;
+                }}
+              />
               <AvatarFallback className="text-xl bg-muted">{chat.name?.[0] ?? "?"}</AvatarFallback>
             </Avatar>
 
@@ -583,7 +595,7 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                   ) : members.map((m, i) => {
                     const userProfile = usersById[m.member_id]
                     const displayName   = userProfile?.name    || m.member_name
-                    const displayAvatar = userProfile?.avatar  || m.member_avatar
+                    // const displayAvatar = userProfile?.avatar  || m.member_avatar
                     const inviterProfile = m.inviter_id ? usersById[m.inviter_id] : null
                     const inviterName   = inviterProfile?.name  || m.inviter_name
                     return (
@@ -610,7 +622,13 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                           className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition"
                         >
                           <Avatar className="w-7 h-7 border border-border shrink-0">
-                            <AvatarImage src={displayAvatar} />
+                            <AvatarImage 
+                              src={`${USER_PROFILE_BASE_URL}/${m.member_id}/avatar`}
+                              alt={displayName}
+                              onError={(e) => {
+                                e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.member_id}`;
+                              }}
+                            />
                             <AvatarFallback className="text-xs bg-muted">
                               {displayName?.[0] ?? "?"}
                             </AvatarFallback>
@@ -691,7 +709,7 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                   ) : messages.map((msg, i) => {
                     const senderProfile = usersById[msg.sender_id]
                     const senderName   = senderProfile?.name   || msg.sender_name
-                    const senderAvatar = senderProfile?.avatar || msg.sender_avatar
+                    // const senderAvatar = senderProfile?.avatar || msg.sender_avatar
                     return (
                     <TableRow key={msg.id} onClick={() => navigate(`/admin/message/${msg.id}`)} className={`border-b border-border hover:bg-accent transition-colors cursor-pointer ${i % 2 === 0 ? "bg-background" : "bg-muted/20"}`}>
                       {/* ID */}
@@ -702,7 +720,13 @@ const AdminChatDetails = forwardRef<ChatDetailHandle>(({}, ref) => {
                       <TableCell className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Avatar className="w-6 h-6 border border-border shrink-0">
-                            <AvatarImage src={senderAvatar} />
+                            <AvatarImage 
+                              src={`${USER_PROFILE_BASE_URL}/${msg.sender_id}/avatar`}
+                              alt={senderName}
+                              onError={(e) => {
+                                e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.sender_id}`;
+                              }}
+                            />
                             <AvatarFallback className="text-xs bg-muted">{senderName[0]}</AvatarFallback>
                           </Avatar>
                           <div>

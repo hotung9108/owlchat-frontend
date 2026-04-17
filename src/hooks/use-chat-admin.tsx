@@ -24,6 +24,17 @@ export function useChatAdminService() {
     }
   };
 
+  /* -------- FETCH LIST -------- */
+  const fetchChatsByMemberId = async (memberId: string, params?: ChatQueryParams) => {
+    try {
+      setLoading(true);
+      const res = await chatAdminService.getChatsByMemberId(memberId, params);
+      setChats(res.data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /* -------- FETCH DETAIL -------- */
   const fetchChatById = async (chatId: string) => {
     try {
@@ -61,6 +72,7 @@ export function useChatAdminService() {
     chatDetail,
 
     fetchChats,
+    fetchChatsByMemberId,
     fetchChatById,
     createChat,
     updateChat,

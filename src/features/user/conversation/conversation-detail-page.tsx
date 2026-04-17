@@ -15,6 +15,7 @@ import { useWebSocket } from "@/providers/websocket-provider";
 import type { MessageType } from "@/types/enum/mesage-type";
 import { websocketMessageService } from "@/services/websocket-message-service";
 import type { LocationData } from "@/config/mapbox";
+import { userProfileService } from "@/services/user-profile-service";
 
 export default function ConversationDetailPage() {
     const chatBodyRef = useRef<HTMLDivElement>(null);
@@ -35,6 +36,7 @@ export default function ConversationDetailPage() {
         loading,
         getMessagesByChatId,
         // postNewTextMessage,
+        // postNewLocationMessage,
         postNewFileMessage,
         putTextMessage,
         softDeleteMessage,
@@ -44,9 +46,10 @@ export default function ConversationDetailPage() {
     
     const { profile } = useUserProfileContext();
     const { fetchProfileById } = useUserProfile();
-    const { getChatByChatId } = useChatUser();
+    const { getChatByChatId, getChatAvatar } = useChatUser();
     const { getChatMembersByChatId } = useChatMemberUser();
-    const [chatType, setChatType] = useState("")
+    const [chatType, setChatType] = useState("");
+    const blobUrlRef = useRef<string | null>(null);
 
     // Profile is already loaded by UserProfileProvider, no need to fetch here
 
@@ -59,6 +62,19 @@ export default function ConversationDetailPage() {
                 const chat = await getChatByChatId(null, null, conversationId);
                 console.log("[Chat] Chat metadata:", { id: chat?.id, type: chat?.type, name: chat?.name });
                 setChatType(chat.type)
+                
+                // Fetch actual avatar blob from backend and convert to URL
+                let avatarUrl: string | undefined = undefined;
+                if (chat?.id) {
+                    try {
+                        const avatarBlob = await getChatAvatar(null, null, chat.id);
+                        avatarUrl = URL.createObjectURL(avatarBlob);
+                    } catch (avatarErr) {
+                        // Avatar not found or error - just ignore and continue
+                        console.debug("[Chat] Avatar not available:", avatarErr);
+                    }
+                }
+                
                 if (chat.type === "PRIVATE") {
                     try {
                         const membersResp = await getChatMembersByChatId(null, null, conversationId);
@@ -93,9 +109,24 @@ export default function ConversationDetailPage() {
                                 console.log("[Chat] Fetched profile:", otherUserProfile);
                                 
                                 if (otherUserProfile?.name) {
+                                    // Fetch other user's avatar blob
+                                    let otherUserAvatarUrl = avatarUrl;
+                                    try {
+                                        const avatarBlob = await userProfileService.getUserAvatar(otherUserId);
+                                        otherUserAvatarUrl = URL.createObjectURL(avatarBlob);
+                                        if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+                                            URL.revokeObjectURL(blobUrlRef.current);
+                                        }
+                                        blobUrlRef.current = otherUserAvatarUrl;
+                                    } catch (err) {
+                                        console.debug("[Chat] Other user avatar not available", err);
+                                        // Fallback to chat avatar if exists
+                                        otherUserAvatarUrl = avatarUrl;
+                                    }
+                                    
                                     setChatMetadata({
                                         name: otherUserProfile.name,
-                                        avatar: otherUserProfile.avatar || chat.avatar,
+                                        avatar: otherUserAvatarUrl,
                                         isOnline: true, 
                                     });
                                     console.log("[Chat] ✓ Set profile name:", otherUserProfile.name);
@@ -113,7 +144,7 @@ export default function ConversationDetailPage() {
                 // Fallback to chat defaults (Group chat uses chat name)
                 setChatMetadata({
                     name: chat.name || "Chat",
-                    avatar: chat.avatar,
+                    avatar: avatarUrl || chat.avatar,
                     isOnline: chat.status,
                 });
                 console.log("[Chat] Set fallback name:", chat.name || "Chat");
@@ -126,7 +157,21 @@ export default function ConversationDetailPage() {
         if (profile?.id) {
             initChatContext();
         }
-    }, [conversationId, profile?.id, getChatByChatId, getChatMembersByChatId, fetchProfileById]);
+
+        // Cleanup: revoke object URLs when unmounting or conversationId changes
+        return () => {
+            if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+                URL.revokeObjectURL(blobUrlRef.current);
+            }
+            blobUrlRef.current = null;
+            setChatMetadata(prev => {
+                if (prev.avatar && prev.avatar.startsWith('blob:')) {
+                    URL.revokeObjectURL(prev.avatar);
+                }
+                return { name: "Loading..." };
+            });
+        };
+    }, [conversationId, profile?.id, getChatByChatId, getChatMembersByChatId, getChatAvatar, fetchProfileById]);
 
     // 3. Pagination & Initial Messages
     const fetchMessages = useCallback(async (targetPage: number) => {
@@ -373,6 +418,15 @@ export default function ConversationDetailPage() {
                 "LOCATION"
             );
 
+            // postNewLocationMessage(
+            //     optimisticMessage.senderId, 
+            //     optimisticMessage.senderId, 
+            //     {
+            //         chatId: optimisticMessage.chatId, 
+            //         content: optimisticMessage.content
+            //     }
+            // );
+
             console.log("[Chat] ✓ Location shared via WebSocket (optimistic ID: " + tempId + ")");
         } catch (err) {
             console.error("Failed to share location:", err);
@@ -439,7 +493,9 @@ export default function ConversationDetailPage() {
                         ref={chatInfoRef}
                         type={chatType}
                         conversationId={conversationId} 
-                        currentUserId={profile?.id} 
+                        currentUserId={profile?.id}
+                        chatName={chatMetadata.name}
+                        chatAvatar={chatMetadata.avatar}
                         onClose={() => setIsSidebarOpen(false)} 
                     />
                 )}

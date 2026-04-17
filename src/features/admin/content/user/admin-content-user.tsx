@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { userProfileService } from "@/services/user-profile-service"
-import { chatAdminService } from "@/services/chat-admin-service"
 import { useAccountService } from "@/hooks/use-account"
 import { useFriendshipAdminService } from "@/hooks/use-friendship-admin"
 import { useFriendRequestService } from "@/hooks/use-friend-request-admin"
 import { useBlockService } from "@/hooks/use-block-admin"
 import { useUserProfile } from "@/hooks/use-user-profile"
+import { useChatAdminService } from "@/hooks/use-chat-admin"
 import { useMemberAdminService } from "@/hooks/use-chat-member-admin"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,11 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
+import { API_ENDPOINTS } from "@/config/api"
+
+const USER_PROFILE_BASE_URL = `${API_ENDPOINTS.USER_SERVICE}/user`;
+
+const CHAT_API = `${API_ENDPOINTS.CHAT_SERVICE}/admin/chat`;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -84,11 +89,17 @@ const INITIAL_USER: UserProfile = {
 
 // ── Helper Components ─────────────────────────────────────────────────────────
 
-function UserCell({ name, avatar, id }: { name: string; avatar: string; id: string }) {
+function UserCell({ name, id }: { name: string; avatar: string; id: string }) {
   return (
     <div className="flex items-center gap-2.5">
       <Avatar className="w-7 h-7 border border-border">
-        <AvatarImage src={avatar} />
+        <AvatarImage 
+          src={`${USER_PROFILE_BASE_URL}/${id}/avatar`}
+          alt={name}
+          onError={(e) => {
+            e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`;
+          }}
+        />
         <AvatarFallback className="text-xs bg-muted">{name[0]}</AvatarFallback>
       </Avatar>
       <div>
@@ -124,8 +135,9 @@ export default function AdminContentUser() {
   const navigate = useNavigate()
   const { updateStatus, updateRole } = useAccountService()
   {/* NEW HOOK */}
-  const { fetchProfileById } = useUserProfile()
+  const { fetchProfileById, uploadAvatar } = useUserProfile()
   const { remove: removeChatMember } = useMemberAdminService()
+  const { chats: apiChats, fetchChatsByMemberId, loading: chatsLoading } = useChatAdminService()
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [user, setUser]                   = useState<UserProfile>(INITIAL_USER)
@@ -164,7 +176,6 @@ export default function AdminContentUser() {
 
   const [chats, setChats]                 = useState<Chat[]>([])
   const [chatsLoaded, setChatsLoaded]     = useState(false)
-  const [chatsLoading, setChatsLoading]   = useState(false)
 
   const { friendships, fetchByUser: fetchFriendships, loading: friendshipsLoading } = useFriendshipAdminService()
   const [friendshipsLoaded, setFriendshipsLoaded] = useState(false)
@@ -205,33 +216,27 @@ export default function AdminContentUser() {
 
   useEffect(() => {
     if (activeTab === "chats" && !chatsLoaded && id) {
-      const fetchChats = async () => {
-        try {
-          setChatsLoading(true)
-          const response = await chatAdminService.getChats({ initiatorId: id })
-          const chatData = response.data?.content || response.data || []
-          setChats(chatData.map((c: any) => ({
-            id: c.id,
-            status: c.status ?? true,
-            type: c.type || "PRIVATE",
-            name: c.name || "Unknown",
-            avatar: c.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.id}`,
-            initiator_id: c.initiatorId || c.initiator_id,
-            newest_message_id: c.newestMessageId || c.newest_message_id,
-            newest_message_date: c.newestMessageDate || c.newest_message_date,
-            created_date: c.createdDate || c.created_date,
-            updated_date: c.updatedDate || c.updated_date,
-          })))
-          setChatsLoaded(true)
-        } catch (err) {
-          console.error("Failed to load user chats", err)
-        } finally {
-          setChatsLoading(false)
-        }
-      }
-      fetchChats()
+      fetchChatsByMemberId(id).then(() => setChatsLoaded(true))
     }
-  }, [activeTab, chatsLoaded, id])
+  }, [activeTab, chatsLoaded, id, fetchChatsByMemberId])
+
+  useEffect(() => {
+    if (apiChats) {
+      const chatData = apiChats || []
+      setChats(chatData.map((c: any) => ({
+        id: c.id,
+        status: c.status ?? true,
+        type: c.type || "PRIVATE",
+        name: c.name || "Unknown",
+        avatar: c.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.id}`,
+        initiator_id: c.initiatorId || c.initiator_id,
+        newest_message_id: c.newestMessageId || c.newest_message_id,
+        newest_message_date: c.newestMessageDate || c.newest_message_date,
+        created_date: c.createdDate || c.created_date,
+        updated_date: c.updatedDate || c.updated_date,
+      })))
+    }
+  }, [apiChats])
 
   useEffect(() => {
     if (activeTab === "friends" && !friendshipsLoaded && id) {
@@ -281,6 +286,8 @@ export default function AdminContentUser() {
 
   // Edit dialog
   const [editOpen, setEditOpen]           = useState(false)
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null)
+  const [avatarTimestamp, setAvatarTimestamp] = useState(Date.now())
   const [editForm, setEditForm]           = useState<Omit<UserProfile, "id" | "created_date" | "updated_date">>({
     status:        user.status,
     role:          user.role,
@@ -303,6 +310,7 @@ export default function AdminContentUser() {
 
   const openEdit = () => {
     // reset form to current user values each time dialog opens
+    setSelectedAvatarFile(null)
     setEditForm({
       status:        user.status,
       role:          user.role,
@@ -318,6 +326,13 @@ export default function AdminContentUser() {
 
   const handleSaveEdit = async () => {
     try {
+      // 1. Upload avatar if selected
+      if (selectedAvatarFile) {
+        await uploadAvatar(user.id, selectedAvatarFile)
+        setAvatarTimestamp(Date.now())
+      }
+
+      // 2. Update profile
       await userProfileService.updateProfile(user.id, {
         name: editForm.name,
         gender: editForm.gender,
@@ -430,7 +445,13 @@ export default function AdminContentUser() {
             <div className="px-6 pb-6">
               <div className="flex items-end justify-between -mt-10 mb-4">
                 <Avatar className="w-20 h-20 border-4 border-background shadow-md">
-                  <AvatarImage src={user.avatar} />
+                  <AvatarImage 
+                    src={`${USER_PROFILE_BASE_URL}/${user.id}/avatar?t=${avatarTimestamp}`}
+                    alt={user.name}
+                    onError={(e) => {
+                      e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+                    }}
+                  />
                   <AvatarFallback className="text-xl bg-muted">{user.name[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex gap-2 pb-1">
@@ -627,7 +648,13 @@ export default function AdminContentUser() {
                             <TableCell className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <Avatar className="w-7 h-7 border border-border">
-                                  <AvatarImage src={c.avatar} />
+                                  <AvatarImage  
+                                    src={`${CHAT_API}/${c.id}/avatar`}
+                                    alt={c.name}
+                                    onError={(e) => {
+                                      e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.id}`;
+                                    }}
+                                  />
                                   <AvatarFallback className="text-xs bg-muted">{c.name?.[0] || '?'}</AvatarFallback>
                                 </Avatar>
                                 <span className="text-xs font-medium text-foreground whitespace-nowrap">{c.name}</span>
@@ -656,7 +683,7 @@ export default function AdminContentUser() {
                                 }}
                                 className="text-xs px-3 py-1.5 rounded-md border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
                               >
-                                Leave
+                                Kick out
                               </button>
                             </TableCell>
                           </TableRow>
@@ -770,7 +797,7 @@ export default function AdminContentUser() {
 
                     {/* Avatar preview */}
                     <Avatar className="w-14 h-14 border border-border shrink-0">
-                    <AvatarImage src={editForm.avatar} />
+                    <AvatarImage src={editForm.avatar} />  
                     <AvatarFallback className="text-lg bg-muted">{editForm.name[0]}</AvatarFallback>
                     </Avatar>
 
@@ -793,6 +820,7 @@ export default function AdminContentUser() {
                         }
 
                         setAvatarError("")
+                        setSelectedAvatarFile(file)
 
                         // convert to base64 so we can preview it
                         const reader = new FileReader()

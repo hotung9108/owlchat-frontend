@@ -9,14 +9,16 @@ import {
 import {
   MessageSquare, Hash, User, Calendar, Clock,
   FileText, Image, Video, Film, Bell, Power, PowerOff, Link, Download,
+  Trash,
 } from "lucide-react"
 import { format } from "date-fns"
 import { AdminContentTopBar } from "../../components/admin-content-top-bar"
 import { useNavigate } from "react-router-dom";
+import { LocationMessage } from "@/components/shared/location-message"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type MessageType  = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE"
+type MessageType  = "SYSTEM_MESSAGE" | "TEXT" | "IMG" | "VID" | "GENERIC_FILE" | "LOCATION"
 type MessageState = "ORIGIN" | "EDITED" | "REMOVED"
 
 type Message = {
@@ -55,6 +57,7 @@ function TypeBadge({ type }: { type: MessageType }) {
     IMG:            "border-pink-500/40 bg-pink-500/10 text-pink-600 dark:text-pink-400",
     VID:            "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400",
    GENERIC_FILE:            "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+   LOCATION: "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400",
   }
   return (
     <Badge variant="outline" className={`text-xs gap-1.5 ${styles[type]}`}>
@@ -120,7 +123,7 @@ export default function AdminContentMessage() {
   const navigate = useNavigate();
 
   const { id } = useParams<{ id: string }>()
-  const { messageDetail, fetchById, activate, getResource, loading } = useMessageService()
+  const { messageDetail, fetchById, activate, getResource, loading, deleteHard } = useMessageService()
 
   const [message, setMessage]       = useState<Message | null>(null)
   const [toggleOpen, setToggleOpen] = useState(false)
@@ -173,6 +176,18 @@ export default function AdminContentMessage() {
     }
   }
 
+  const [toggleDeleteOpen, setToggleDeleteOpen] = useState(false)
+
+  const handleDeleteMessage = async () => {
+    if (!message) return
+    try {
+      await deleteHard(message.id)
+      navigate(`/admin/chat/${message.chat_id}`)
+    } finally {
+      setToggleOpen(false)
+    }
+  }
+
   if (loading || !message) {
     return (
       <div className="flex items-center justify-center h-full w-full bg-background">
@@ -199,6 +214,12 @@ export default function AdminContentMessage() {
               ? "border-destructive/40 text-destructive hover:bg-destructive/10"
               : "border-green-500/40 text-green-600 hover:bg-green-500/10 dark:text-green-400",
             onClick: () => setToggleOpen(true),
+          },
+          {
+            label: "Delete Forever",
+            icon: <Trash size={13}/>,
+            colorClass: "border-destructive/40 text-destructive hover:bg-destructive/10",
+            onClick: () => setToggleDeleteOpen(true),
           },
         ]}
       />
@@ -233,6 +254,9 @@ export default function AdminContentMessage() {
               // message.state === "REMOVED" ? (
               //   <p className="text-sm text-muted-foreground italic">This message has been removed.</p>
               // ) : 
+              message.type === "LOCATION" ? (
+                <LocationMessage location={JSON.parse(message.content)} isMe={false} />
+              ) : 
               message.type === "IMG" ? (
                 <div className="relative group">
                   <div className="flex items-center justify-center h-full w-full">
@@ -431,6 +455,29 @@ export default function AdminContentMessage() {
               onClick={handleToggleStatus}
             >
               {message.status ? "Deactivate" : "Activate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Delete Confirm ── */}
+      <AlertDialog open={toggleDeleteOpen} onOpenChange={setToggleDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete Message?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete forever the message.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              onClick={handleDeleteMessage}
+            >
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -38,12 +38,14 @@ export function LoginForm({
     const [username, setUsername] = useState<string>("");
     const [password, setPassword] = useState<string>("");
     const [showAlert, setShowAlert] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
     const { login } = useAuth();
     const { remount: remountProfile } = useUserProfileContext();
     const { remount: remountSocket } = useWebSocket();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsLoading(true);
         try {
             const response = await login({ username, password });
             setAlertMessage("Login successful! Redirecting...");
@@ -74,6 +76,7 @@ export function LoginForm({
             setShowAlert(true);
             setTimeout(() => {
                 setShowAlert(false);
+                setIsLoading(false);
             }, 2000);
         }
     };
@@ -138,8 +141,12 @@ export function LoginForm({
                                 />
                             </Field>
                             <Field>
-                                <Button type="submit" onClick={handleLogin}>
-                                    Login
+                                <Button 
+                                    type="submit" 
+                                    onClick={handleLogin}
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? "Logging in..." : "Login"}
                                 </Button>
                             </Field>
                             <FieldDescription className="text-center">

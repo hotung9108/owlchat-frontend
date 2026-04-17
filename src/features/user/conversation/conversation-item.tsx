@@ -1,11 +1,12 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { User, Users } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useEffect, useState, useCallback, memo } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState, useCallback, memo, useRef } from "react";
 import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { useMessageUser } from "@/hooks/use-chat-message-user";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { userProfileService } from "@/services/user-profile-service";
 
 type Props = {
     id: string;
@@ -24,6 +25,8 @@ export default memo(function ConversationItem({
     currentUserId,
     isGroup = false,
 }: Props) {
+    const location = useLocation();
+    const isSelected = location.pathname === `/conversations/${id}`;
     const { getChatMembersByChatId } = useChatMemberUser();
     const { getMessageById } = useMessageUser();
     const [displayName, setDisplayName] = useState(username);
@@ -31,6 +34,7 @@ export default memo(function ConversationItem({
     const [preview, setPreview] = useState("Start the conversation!");
     const [timeStamp, setTimeStamp] = useState<string | null>(null);
     const { fetchProfileById } = useUserProfile();
+    const blobUrlRef = useRef<string | null>(null);
     
     const loadMembers = useCallback(async () => {
         if (!id || !currentUserId || isGroup) return;
@@ -48,8 +52,23 @@ export default memo(function ConversationItem({
                     const otherId = other.memberId ?? other.userId ?? other.id;
                     const otherProfile = await fetchProfileById(otherId);
                     if (otherProfile?.name) setDisplayName(otherProfile.name);
-                    if (otherProfile?.avatar || other.memberAvatar) {
-                        setDisplayAvatar(otherProfile?.avatar || other.memberAvatar);
+                    
+                    // Fetch other user's avatar blob instead of string
+                    try {
+                        const avatarBlob = await userProfileService.getUserAvatar(otherId);
+                        const avatarUrl = URL.createObjectURL(avatarBlob);
+                        // Revoke old blob URL
+                        if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+                            URL.revokeObjectURL(blobUrlRef.current);
+                        }
+                        blobUrlRef.current = avatarUrl;
+                        setDisplayAvatar(avatarUrl);
+                    } catch (avatarErr) {
+                        // Avatar not available - use fallback
+                        console.debug("Avatar not available for user:", otherId);
+                        if (otherProfile?.avatar) {
+                            setDisplayAvatar(otherProfile.avatar);
+                        }
                     }
                 }
             }
@@ -101,9 +120,20 @@ export default memo(function ConversationItem({
         loadNewestMessage();
     }, [newestMessageId, currentUserId, loadNewestMessage]);
 
+    // Cleanup blob URL on unmount
+    useEffect(() => {
+        return () => {
+            if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+                URL.revokeObjectURL(blobUrlRef.current);
+            }
+        };
+    }, []);
+
     return (
         <Link to={`/conversations/${id}`} className="w-full">
-            <Card className="p-2 flex flex-row items-center gap-4 truncate w-[95%] mx-auto transition-[color,box-shadow] hover:shadow-md hover:ring-1 hover:ring-ring/50">
+            <Card className={`p-2 flex flex-row items-center gap-4 truncate w-[95%] mx-auto transition-[color,box-shadow,background-color] hover:shadow-md hover:ring-1 hover:ring-ring/50 ${
+                isSelected ? "bg-primary/25 dark:bg-primary/20" : ""
+            }`}>
                 <div className="flex flex-row items-center gap-4 truncate w-full">
                     <Avatar>
                         <AvatarImage src={displayAvatar} />

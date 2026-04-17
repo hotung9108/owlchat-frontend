@@ -7,15 +7,28 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 import { useUserProfileContext } from "@/providers/user-profile-provider";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import type { UserProfile } from "@/types/user-profile.type";
+import type { FriendRequest } from "@/types/friend.type";
 import LoadingLogo from "@/components/shared/loading-logo";
+import { useNavigate } from "react-router-dom";
+import { eventBus } from "@/lib/event-bus";
+import { friendshipService } from "@/services/friendship-service";
+
+interface FriendStatus {
+  isFriends: boolean;
+  requestSent: boolean;
+  requestId?: string;
+}
 
 const DiscoveryFriendCard = ({
     profile,
     onAddFriend,
+    friendStatus,
 }: {
     profile: UserProfile;
     onAddFriend: (id: string) => void;
+    friendStatus: FriendStatus;
 }) => {
+    const navigator = useNavigate();
     const { fetchAvatar } = useUserProfile();
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
@@ -36,6 +49,18 @@ const DiscoveryFriendCard = ({
             if (avatarUrl) URL.revokeObjectURL(avatarUrl);
         };
     }, [avatarUrl]);
+
+    const getButtonState = () => {
+        if (friendStatus.isFriends) {
+            return { text: "Already Friends", disabled: true, variant: "secondary" as const };
+        }
+        if (friendStatus.requestSent) {
+            return { text: "Sent", disabled: true, variant: "secondary" as const };
+        }
+        return { text: "Add Friend", disabled: false, variant: "default" as const };
+    };
+
+    const buttonState = getButtonState();
 
     return (
         <Card className="p-4 justify-between transition-[color,box-shadow] hover:shadow-md hover:ring-1 hover:ring-ring/50">
@@ -70,11 +95,13 @@ const DiscoveryFriendCard = ({
                 <div className="flex gap-2">
                     <Button
                         className="px-4 py-2"
-                        onClick={() => onAddFriend(profile.id)}
+                        variant={buttonState.variant}
+                        disabled={buttonState.disabled}
+                        onClick={() => !buttonState.disabled && onAddFriend(profile.id)}
                     >
-                        Add Friend
+                        {buttonState.text}
                     </Button>
-                    <Button className="px-4 py-2">Profile</Button>
+                    <Button className="px-4 py-2" onClick={() => {navigator(`/profile/${profile.id}`)}} >Profile</Button>
                 </div>
                 <div>
                     <Button variant="ghost" className="">
@@ -97,17 +124,93 @@ export default function FriendDiscoveryFriendPage() {
     const { profile } = useUserProfileContext();
     const {
         postFriendRequest,
+        getSendFriendRequests,
         loading: friendLoading,
     } = useFriend();
 
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPageIndex, setCurrentPageIndex] = useState(0);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [sentRequests, setSentRequests] = useState<Map<string, FriendRequest>>(new Map());
+    const [friendships, setFriendships] = useState<Set<string>>(new Set());
+    const [loadingFriendStatus, setLoadingFriendStatus] = useState(false);
+
+    // Load friend status (sent requests and friendships)
+    const loadFriendStatus = useCallback(async () => {
+        if (!profile?.id) return;
+        
+        try {
+            setLoadingFriendStatus(true);
+            
+            // Fetch sent friend requests
+            const sentReqs = await getSendFriendRequests(null, null, 0, 100);
+            const sentMap = new Map<string, FriendRequest>();
+            sentReqs.forEach((req: FriendRequest) => {
+                if (req.status === "PENDING") {
+                    sentMap.set(req.receiverId, req);
+                }
+            });
+            setSentRequests(sentMap);
+
+            // Fetch friendships
+            try {
+                const friendshipsData = await friendshipService.getFriendships(null, null, 0, 100);
+                const friendshipSet = new Set<string>();
+                
+                // Helper to extract friend ID based on current user
+                const extractFriendId = (friendship: any) => {
+                    // If firstUserId is current user, second is the friend
+                    if (friendship.firstUserId === profile.id) {
+                        return friendship.secondUserId;
+                    }
+                    // If secondUserId is current user, first is the friend
+                    if (friendship.secondUserId === profile.id) {
+                        return friendship.firstUserId;
+                    }
+                    return null;
+                };
+                
+                if (Array.isArray(friendshipsData)) {
+                    friendshipsData.forEach((friendship: any) => {
+                        const friendId = extractFriendId(friendship);
+                        if (friendId) {
+                            friendshipSet.add(friendId);
+                        }
+                    });
+                } else if (friendshipsData?.content) {
+                    friendshipsData.content.forEach((friendship: any) => {
+                        const friendId = extractFriendId(friendship);
+                        if (friendId) {
+                            friendshipSet.add(friendId);
+                        }
+                    });
+                }
+                setFriendships(friendshipSet);
+            } catch (err) {
+                console.error("Failed to fetch friendships:", err);
+            }
+        } catch (err) {
+            console.error("Failed to load friend status:", err);
+        } finally {
+            setLoadingFriendStatus(false);
+        }
+    }, [profile?.id, getSendFriendRequests]);
 
     // Load all profiles on mount
     useEffect(() => {
         fetchAllProfiles();
-    }, [fetchAllProfiles]);
+        loadFriendStatus();
+        
+        const handleSocial = () => {
+            fetchAllProfiles();
+            loadFriendStatus();
+        };
+        eventBus.on("social", handleSocial);
+        return () => {
+            eventBus.off("social", handleSocial);
+        };
+    }, [fetchAllProfiles, loadFriendStatus]);
     
     // Filter profiles based on search term and exclude current user
     const filteredProfiles = useMemo(() => {
@@ -157,11 +260,24 @@ export default function FriendDiscoveryFriendPage() {
     const handleAddFriend = async (userId: string) => {
         try {
             await postFriendRequest(null, null, { receiverId: userId });
-            setErrorMessage("Failed to send friend request.");
+            setSuccessMessage("Friend request sent!");
+            setTimeout(() => setSuccessMessage(null), 3000);
+            // Reload friend status to update button state
+            await loadFriendStatus();
         } catch (error) {
+            console.error("Error sending friend request:", error);
             setErrorMessage("Failed to send friend request.");
             setTimeout(() => setErrorMessage(null), 3000);
         }
+    };
+
+    // Get friend status for a profile
+    const getFriendStatus = (userId: string): FriendStatus => {
+        return {
+            isFriends: friendships.has(userId),
+            requestSent: sentRequests.has(userId),
+            requestId: sentRequests.get(userId)?.id,
+        };
     };
     
     return (
@@ -176,7 +292,7 @@ export default function FriendDiscoveryFriendPage() {
                 />
             </div>
 
-            {profilesLoading || friendLoading ? (
+            {profilesLoading || friendLoading || loadingFriendStatus ? (
                 <div className="flex items-center justify-center py-12">
                     <LoadingLogo />
                 </div>
@@ -194,6 +310,7 @@ export default function FriendDiscoveryFriendPage() {
                                 key={p.id}
                                 profile={p}
                                 onAddFriend={handleAddFriend}
+                                friendStatus={getFriendStatus(p.id)}
                             />
                         ))}
                     </div>
@@ -215,7 +332,7 @@ export default function FriendDiscoveryFriendPage() {
                                     className="gap-1"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
-                                    Previous
+                                    
                                 </Button>
 
                                 <div className="flex items-center gap-2 px-4">
@@ -243,7 +360,7 @@ export default function FriendDiscoveryFriendPage() {
                                     disabled={currentPageIndex >= totalPages - 1}
                                     className="gap-1"
                                 >
-                                    Next
+                                    
                                     <ChevronRight className="w-4 h-4" />
                                 </Button>
                             </div>
@@ -253,6 +370,11 @@ export default function FriendDiscoveryFriendPage() {
                     {errorMessage && (
                         <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md">
                             {errorMessage}
+                        </div>
+                    )}
+                    {successMessage && (
+                        <div className="mt-4 p-3 bg-green-100 text-green-800 rounded-md">
+                            {successMessage}
                         </div>
                     )}
                 </>

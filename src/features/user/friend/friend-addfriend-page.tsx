@@ -8,6 +8,7 @@ import LoadingLogo from "@/components/shared/loading-logo";
 import FriendRequestCard from "./friend-addfriend-card";
 import SentRequestCard from "./friend-sentrequest-card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { eventBus } from "@/lib/event-bus";
 
 export default function FriendAddFriendPage() {
     const {
@@ -53,6 +54,11 @@ export default function FriendAddFriendPage() {
             }
         };
         fetchAllRequests();
+        
+        eventBus.on("social", fetchAllRequests);
+        return () => {
+            eventBus.off("social", fetchAllRequests);
+        };
     }, [getReceiveFriendRequests, getSendFriendRequests]);
 
     const handleAcceptFriendRequest = async (id: string) => {

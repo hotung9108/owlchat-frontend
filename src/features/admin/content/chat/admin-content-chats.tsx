@@ -28,6 +28,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Label } from "@/components/ui/label"
 import { useChatAdminService } from "@/hooks/use-chat-admin"
 import { useUserProfile } from "@/hooks/use-user-profile"
+import { API_ENDPOINTS } from "@/config/api"
+
+const CHAT_API = `${API_ENDPOINTS.CHAT_SERVICE}/admin/chat`;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -285,7 +288,13 @@ export default function AdminContentChats() {
                   <TableCell className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <Avatar className="w-8 h-8 border border-border shrink-0">
-                        <AvatarImage src={c.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.id}`} />
+                        <AvatarImage  
+                          src={`${CHAT_API}/${c.id}/avatar`}
+                          alt={c.name}
+                          onError={(e) => {
+                            e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.id}`;
+                          }}
+                        />
                         <AvatarFallback className="text-xs bg-muted">{c.name?.[0]}</AvatarFallback>
                       </Avatar>
                       <span className="text-xs font-medium text-foreground whitespace-nowrap max-w-[180px] truncate">

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useDeferredValue, useMemo } from "react";
+import { useEffect, useState, useCallback, useDeferredValue, useMemo, useRef } from "react";
 import ItemList from "../item-list";
 import UserLayout from "../user-layout";
 import LoadingLogo from "@/components/shared/loading-logo";
@@ -10,6 +10,7 @@ import { useChatMemberUser } from "@/hooks/use-chat-member-user";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useUserProfileContext } from "@/providers/user-profile-provider";
 import { useWebSocket } from "@/providers/websocket-provider";
+import { showBrowserNotification } from "@/utils/notification";
 
 type Props = React.PropsWithChildren<{}>;
 
@@ -25,21 +26,43 @@ export default function ConversationsLayout({ children }: Props) {
     const [conversations, setConversations] = useState<Conversation[] | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const deferredSearchQuery = useDeferredValue(searchQuery);
-    const { getChatsByMemberId } = useChatUser();
+    const { getChatsByMemberId, getChatAvatar } = useChatUser();
     const { getChatMembersByChatId } = useChatMemberUser();
     const { fetchProfileById } = useUserProfile();
     const { profile } = useUserProfileContext();
     const { subscribeToTopic } = useWebSocket();
+    const previousBlobUrlsRef = useRef<string[]>([]);
 
     // Memoized fetch function
     const fetchConversationsData = useCallback(async () => {
         try {
-            const data = await getChatsByMemberId(null, null, "", 0, 10, false);
+            // Revoke old blob URLs before fetching new ones
+            previousBlobUrlsRef.current.forEach((url) => {
+                if (url && url.startsWith('blob:')) {
+                    URL.revokeObjectURL(url);
+                }
+            });
+            previousBlobUrlsRef.current = [];
             
-            // Batch fetch member names - limit concurrent requests
+            const data = await getChatsByMemberId(null, null, "", -1, 10, false);
+            
+            // Batch fetch member names and avatars - limit concurrent requests
             const conversationsWithMembers = await Promise.all(
                 data.map(async (chat: any) => {
                     let memberNames: string[] = [];
+                    let avatarUrl = "";
+                    
+                    // Fetch actual avatar blob from backend
+                    try {
+                        const avatarBlob = await getChatAvatar(null, null, chat.id);
+                        avatarUrl = URL.createObjectURL(avatarBlob);
+                        // Track blob URL for cleanup
+                        previousBlobUrlsRef.current.push(avatarUrl);
+                    } catch (avatarErr) {
+                        // Avatar not found or error - just ignore
+                        console.debug("Avatar not available for chat:", chat.id);
+                    }
+                    
                     try {
                         const membersResp = await getChatMembersByChatId(null, null, chat.id);
                         const members = membersResp.content || membersResp;
@@ -70,7 +93,7 @@ export default function ConversationsLayout({ children }: Props) {
 
                     return {
                         id: chat.id,
-                        imageUrl: chat.avatar || "",
+                        imageUrl: avatarUrl,
                         username: chat.name,
                         isGroup: chat.type === "GROUP",
                         newestMessageId: chat.newestMessageId,
@@ -83,10 +106,20 @@ export default function ConversationsLayout({ children }: Props) {
         } catch (err) {
             console.error("Error fetching conversations:", err);
         }
-    }, [getChatsByMemberId, getChatMembersByChatId, fetchProfileById, profile?.id]);
+    }, [getChatsByMemberId, getChatMembersByChatId, getChatAvatar, fetchProfileById, profile?.id]);
 
     useEffect(() => {
         fetchConversationsData();
+        
+        // Cleanup: revoke blob URLs on unmount
+        return () => {
+            previousBlobUrlsRef.current.forEach((url) => {
+                if (url && url.startsWith('blob:')) {
+                    URL.revokeObjectURL(url);
+                }
+            });
+            previousBlobUrlsRef.current = [];
+        };
     }, [fetchConversationsData]);
 
     // Listen for realtime message updates - Lazy load subscriptions
@@ -111,6 +144,14 @@ export default function ConversationsLayout({ children }: Props) {
                         updated.unshift(movedChat);
                         return updated;
                     });
+
+                    // Trigger browser notification for messages from others
+                    if (notification.data?.senderId !== profile?.id) {
+                        showBrowserNotification(`New message from ${chat.username}`, {
+                            body: notification.data?.content || "Sent an attachment",
+                            icon: chat.imageUrl || "/favicon.ico",
+                        });
+                    }
                 }
             });
             subscriptions.push(subscription);

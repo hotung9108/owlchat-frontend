@@ -141,6 +141,7 @@ export default function PinCodePage() {
               : "We sent a 6-digit code to your email. Enter it below to verify your account."
             }
           </p>
+            <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">Check your email spam folders.</p>
         </div>
 
         {/* Success alert */}

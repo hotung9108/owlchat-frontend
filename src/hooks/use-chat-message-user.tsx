@@ -154,6 +154,34 @@ export const useMessageUser = () => {
         [],
     );
 
+    const postNewLocationMessage = useCallback(
+        async (
+            accountId: string | null,
+            requesterId: string | null,
+            textMessageRequest: TextMessageUserRequest,
+        ) => {
+            setLoading(true);
+            setError(null);
+            try {
+                const data = await messageUserService.postNewLocationMessage(
+                    accountId,
+                    requesterId,
+                    textMessageRequest,
+                );
+                setMessages((prevMessages) => [data, ...prevMessages]);
+            } catch (err: any) {
+                setError(
+                    err.message ||
+                        "An error occurred while sending the message.",
+                );
+                throw err;
+            } finally {
+                setLoading(false);
+            }
+        },
+        [],
+    );
+
     const postNewFileMessage = useCallback(
         async (
             accountId: string | null,
@@ -260,6 +288,7 @@ export const useMessageUser = () => {
         getMessagesByChatId,
         getMessageById,
         postNewTextMessage,
+        postNewLocationMessage,
         postNewFileMessage,
         putTextMessage,
         softDeleteMessage,

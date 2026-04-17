@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,9 +15,10 @@ export function ProfileFriends({ accountId }: ProfileFriendsProps) {
   const navigate = useNavigate();
   const [friends, setFriends] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const previousBlobUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    const loadFriends = async () => {
+    const loadFriendsWithAvatars = async () => {
       if (!accountId) {
         setLoading(false);
         return;
@@ -29,14 +30,30 @@ export function ProfileFriends({ accountId }: ProfileFriendsProps) {
         const friendships = await friendshipService.getFriendships(accountId, null, 0, 9);
         
         if (friendships && friendships.length > 0) {
-          // For each friendship, get the other user's profile
+          // For each friendship, get the other user's profile and avatar blob
           const friendProfiles = await Promise.all(
             friendships.map(async (friendship: any) => {
               try {
                 // Determine which ID is the friend (the one that's not the current user)
                 const friendId = friendship.firstUserId === accountId ? friendship.secondUserId : friendship.firstUserId;
                 const profile = await userProfileService.getProfileById(friendId);
-                return profile;
+                
+                // Fetch actual avatar blob from backend
+                let avatarUrl = "";
+                try {
+                  const avatarBlob = await userProfileService.getUserAvatar(friendId);
+                  avatarUrl = URL.createObjectURL(avatarBlob);
+                  // Track blob URL for cleanup
+                  previousBlobUrlsRef.current.push(avatarUrl);
+                } catch (err) {
+                  // Avatar not found or error - use default
+                  console.debug(`Avatar not available for user ${friendId}`);
+                }
+                
+                return {
+                  ...profile,
+                  avatarUrl: avatarUrl, // Override with blob URL
+                };
               } catch (err) {
                 console.error("Failed to fetch profile:", err);
                 return null;
@@ -53,7 +70,17 @@ export function ProfileFriends({ accountId }: ProfileFriendsProps) {
       }
     };
 
-    loadFriends();
+    loadFriendsWithAvatars();
+
+    // Cleanup: revoke old blob URLs on unmount or when accountId changes
+    return () => {
+      previousBlobUrlsRef.current.forEach((url) => {
+        if (url && url.startsWith("blob:")) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      previousBlobUrlsRef.current = [];
+    };
   }, [accountId]);
 
   const getInitials = (name: string) => {
@@ -97,7 +124,7 @@ export function ProfileFriends({ accountId }: ProfileFriendsProps) {
                       onClick={() => handleViewProfile(friend.id)}
                     >
                         <Avatar className="h-28 w-full rounded-lg border border-border/50 bg-white">
-                            <AvatarImage src={friend.avatar} className="object-cover group-hover:opacity-90 transition-opacity" />
+                            <AvatarImage src={friend.avatarUrl} className="object-cover group-hover:opacity-90 transition-opacity" />
                             <AvatarFallback className="rounded-lg">{getInitials(friend.name)}</AvatarFallback>
                         </Avatar>
                         <span className="text-xs font-semibold mt-1 truncate group-hover:underline">
